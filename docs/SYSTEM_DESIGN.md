@@ -2,9 +2,15 @@
 
 ## Architecture
 
-SecureAuthX uses a modular monolith architecture. During Sprint 00, the only executable application is the Spring Boot backend in `backend/server`.
+SecureAuthX uses a modular monolith architecture. During Sprint 01, the executable application is the Spring Boot backend in `backend/server`.
 
-Future feature modules must live under `com.secureauthx.server` using feature-first package boundaries and the layered pattern defined in the engineering handbook.
+Feature modules live under `com.secureauthx.server` using feature-first package boundaries and the layered pattern defined in the engineering handbook.
+
+## Current Backend Modules
+
+- `auth`: registration endpoint, service, repository, entity, DTOs, mapper, validation, and auth-specific exceptions.
+- `common`: shared API error response and global exception handling.
+- `config`: security and OpenAPI configuration.
 
 ## Runtime Components
 
@@ -37,7 +43,11 @@ The foundation exposes only operational and documentation endpoints publicly:
 - `/swagger-ui`
 - `/swagger-ui/**`
 
-All other routes are denied by default until real authentication and authorization flows are implemented in later sprints. No authentication product flows are implemented in Sprint 00.
+Sprint 01 additionally exposes:
+
+- `POST /api/v1/auth/register`
+
+All other routes are denied by default until real authentication and authorization flows are implemented in later sprints. Registration does not create a session or issue tokens.
 
 ## Configuration
 

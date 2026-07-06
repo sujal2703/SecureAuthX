@@ -6,19 +6,19 @@ Status: COMPLETE
 
 Sprint Number
 
-Sprint 00
+Sprint 01
 
 Sprint Name
 
-Project Foundation
+User Registration
 
 ---
 
 # Sprint Goal
 
-Establish a production-ready engineering foundation for SecureAuthX.
+Implement production-ready user registration for SecureAuthX.
 
-No authentication features should be implemented until this sprint is complete.
+No login, JWT, OAuth, OIDC, RBAC, passkeys, or future roadmap items are included in this sprint.
 
 ---
 
@@ -28,123 +28,119 @@ Complete the following tasks in order.
 
 1.
 
-Review repository structure.
+Review repository structure and engineering handbook.
 
 2.
 
-Verify engineering handbook.
+Create a Flyway migration for the `users` table.
 
 3.
 
-Configure Docker.
+Create the auth module package structure.
 
 4.
 
-Configure Docker Compose.
+Implement `User` entity.
 
 5.
 
-Configure PostgreSQL.
+Implement `UserRepository`.
 
 6.
 
-Configure Redis.
+Implement registration request and response DTOs.
 
 7.
 
-Configure Flyway.
+Implement password strength validation.
 
 8.
 
-Configure Spring Boot environments.
+Implement registration service.
 
 9.
 
-Configure logging.
+Hash passwords with Argon2id.
 
 10.
 
-Configure OpenAPI.
+Implement registration controller.
 
 11.
 
-Configure health endpoints.
+Expose `POST /api/v1/auth/register`.
 
 12.
 
-Configure environment variables.
+Add consistent JSON error responses.
 
 13.
 
-Verify application startup.
+Return appropriate validation and duplicate email statuses.
 
 14.
 
-Verify Docker startup.
+Document the endpoint with OpenAPI annotations.
 
 15.
 
-Verify database connectivity.
+Write unit tests.
 
 16.
 
-Verify Redis connectivity.
+Write endpoint integration tests.
 
 17.
 
-Verify Flyway migrations.
+Update API documentation.
 
 18.
 
-Write required tests.
+Update database documentation.
 
 19.
 
-Update documentation.
+Update project memory.
 
 20.
 
-Update PROJECT_MEMORY.md.
+Verify build, tests, Docker startup, and Flyway migration.
 
 ---
 
 # Deliverables
 
-At the end of Sprint 00 the repository must contain
+At the end of Sprint 01 the repository must contain
 
-✓ Working Spring Boot application
+✓ User registration endpoint
 
-✓ Docker Compose
+✓ Users table migration
 
-✓ PostgreSQL
+✓ UUID primary keys
 
-✓ Redis
+✓ Unique email enforcement
 
-✓ Flyway
+✓ Argon2id password hashing
 
-✓ OpenAPI
+✓ Validation and duplicate email errors
 
-✓ Health endpoint
+✓ OpenAPI documentation
 
-✓ Environment configuration
-
-✓ Logging configuration
-
-✓ Passing tests
+✓ Passing unit and integration tests
 
 ---
 
 # Not Included
 
-The following features are NOT part of Sprint 00
-
-✗ Registration
+The following features are NOT part of Sprint 01
 
 ✗ Login
 
 ✗ JWT
 
 ✗ OAuth
+
+✗ OpenID Connect
 
 ✗ Passkeys
 
@@ -160,23 +156,23 @@ These belong to future sprints.
 
 # Completion Criteria
 
-Sprint 00 is complete only if
+Sprint 01 is complete only if
 
 ✓ Build succeeds
 
 ✓ Tests pass
 
-✓ Docker starts
+✓ Registration endpoint returns `201 Created` for valid requests
 
-✓ Database starts
+✓ Duplicate email returns `409 Conflict`
 
-✓ Redis starts
+✓ Invalid request returns `400 Bad Request`
 
-✓ Flyway executes successfully
+✓ Passwords are hashed and never stored in plaintext
 
-✓ OpenAPI loads
+✓ Flyway creates the users table successfully
 
-✓ Health endpoint responds
+✓ OpenAPI documents registration
 
 ✓ Documentation updated
 
@@ -186,27 +182,27 @@ Sprint 00 is complete only if
 
 # AI Instructions
 
-Implement Sprint 00 exactly as written.
+Implement Sprint 01 exactly as written.
 
 Do not skip steps.
 
-Do not begin Sprint 01 until Sprint 00 satisfies every completion criterion.
+Do not begin Sprint 02 until Sprint 01 satisfies every completion criterion.
 
 ---
 
 # Completion Record
 
-Sprint 00 completed on 2026-07-06.
+Sprint 01 completed on 2026-07-06.
 
 Verified:
 
 - Backend build succeeds.
 - Backend tests pass.
-- Docker Compose starts backend, PostgreSQL and Redis.
-- PostgreSQL container is healthy and accepts queries.
-- Redis container is healthy and responds to ping.
-- Flyway executes migration `V1__Initial_foundation.sql`.
-- Actuator health responds with `UP`.
-- OpenAPI loads at `/v3/api-docs`.
-- Foundation documentation and project memory are updated.
+- Registration endpoint returns `201 Created`.
+- Duplicate email returns `409 Conflict`.
+- Invalid registration request returns `400 Bad Request`.
+- Passwords are hashed with Argon2id and plaintext passwords are not stored.
+- Flyway executes migration `V2__Create_users_table.sql`.
+- OpenAPI documents registration.
+- API, database, product, system design, user flow documentation and project memory are updated.
 

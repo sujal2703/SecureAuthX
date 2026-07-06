@@ -28,7 +28,7 @@ Foundation
 
 # Current Sprint
 
-Sprint 00
+Sprint 01
 
 ---
 
@@ -65,19 +65,31 @@ Verification completed:
 - `/actuator/health` returns `UP`.
 - `/v3/api-docs` returns SecureAuthX OpenAPI metadata.
 
+Sprint 01 completed on 2026-07-06.
+
+Sprint 01 delivered production-ready user registration only. It added the `auth` module package structure, `User` entity, `UserRepository`, registration DTOs, password strength validation, registration service, registration controller, Argon2id password hashing, consistent JSON error handling, OpenAPI annotations, and a Flyway users table migration.
+
+Sprint 01 verification completed:
+
+- `./gradlew.bat build` succeeds.
+- Unit tests cover password strength validation and registration service behavior.
+- Integration tests cover successful registration, duplicate email conflict, invalid request validation, Argon2id password hashing, and PostgreSQL persistence through Testcontainers.
+- `docker compose --env-file .env.example up --build -d` starts the stack.
+- Flyway schema history contains successful migration `2 - Create users table`.
+- Registration returns `201 Created`.
+- Duplicate email returns `409 Conflict`.
+- Invalid request returns `400 Bad Request`.
+- Password hashes are stored with the Argon2id format and plaintext passwords are not stored.
+
 ---
 
 # Work In Progress
 
-No active sprint implementation is in progress. Awaiting review before Sprint 01.
+No active sprint implementation is in progress. Awaiting review before Sprint 02.
 
 ---
 
 # Pending Work
-
-Sprint 01
-
-User Registration
 
 Sprint 02
 
@@ -163,6 +175,10 @@ Password Hashing
 
 Argon2id
 
+Registration Password Encoder
+
+Spring Security `Argon2PasswordEncoder` with Bouncy Castle provider support
+
 ---
 
 # Known Issues
@@ -183,15 +199,15 @@ ACTIVE
 
 Architecture
 
-UPDATED FOR SPRINT 00
+UPDATED FOR SPRINT 01
 
 Database
 
-UPDATED FOR SPRINT 00
+UPDATED FOR SPRINT 01
 
 API
 
-UPDATED FOR SPRINT 00
+UPDATED FOR SPRINT 01
 
 ---
 

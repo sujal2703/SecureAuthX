@@ -87,7 +87,7 @@ Verified outcomes:
 - `/v3/api-docs` returns SecureAuthX OpenAPI metadata.
 - Foundation documentation and project memory were updated.
 
-Sprint 01 work has not been started.
+Sprint 01 user registration has been implemented.
 
 ## Out of Scope
 

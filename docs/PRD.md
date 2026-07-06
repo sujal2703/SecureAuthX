@@ -2,27 +2,24 @@
 
 ## Current Product Stage
 
-SecureAuthX is in Sprint 00: Project Foundation.
+SecureAuthX is in Sprint 01: User Registration.
 
-The current product objective is not end-user authentication. The objective is to establish a production-quality backend and local development foundation that future authentication work can safely build on.
+The current product objective is production-ready user registration only.
 
-## Sprint 00 Scope
+## Sprint 01 Scope
 
 In scope:
 
-- Spring Boot backend foundation.
-- Dockerized backend runtime.
-- Docker Compose for backend, PostgreSQL, and Redis.
-- Environment-variable based configuration.
-- Flyway database migrations.
-- Logging configuration.
-- Actuator health endpoint.
-- OpenAPI metadata and documentation endpoint.
-- Foundation tests.
+- Public registration endpoint.
+- Email validation and normalization.
+- Password strength validation.
+- Argon2id password hashing.
+- Users table with UUID primary keys and unique email constraint.
+- Consistent JSON error responses.
+- Unit and integration tests.
 
 Out of scope:
 
-- Registration.
 - Login.
 - JWT issuing or validation.
 - OAuth or OpenID Connect.
@@ -32,4 +29,4 @@ Out of scope:
 
 ## Success Criteria
 
-Sprint 00 succeeds when the backend builds, tests pass, Docker Compose starts the foundation services, PostgreSQL and Redis are reachable, Flyway runs successfully, health responds, OpenAPI loads, and project documentation is current.
+Sprint 01 succeeds when registration creates a user securely, duplicate email registration returns conflict, invalid input returns validation errors, plaintext passwords are never stored, OpenAPI documents the endpoint, tests pass, and documentation is current.
