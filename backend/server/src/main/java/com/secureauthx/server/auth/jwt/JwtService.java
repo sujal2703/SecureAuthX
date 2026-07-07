@@ -40,14 +40,21 @@ public class JwtService {
     }
 
     public String createAccessToken(UUID userId, String email) {
+        return createAccessToken(userId, email, null);
+    }
+
+    public String createAccessToken(UUID userId, String email, UUID sessionId) {
         Instant now = Instant.now();
-        return Jwts.builder()
+        var builder = Jwts.builder()
                 .subject(userId.toString())
                 .claim("email", email)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plus(Duration.ofMinutes(accessTokenExpirationMinutes))))
-                .signWith(privateKey, Jwts.SIG.RS256)
-                .compact();
+                .signWith(privateKey, Jwts.SIG.RS256);
+        if (sessionId != null) {
+            builder.claim("sessionId", sessionId.toString());
+        }
+        return builder.compact();
     }
 
     public Claims validateToken(String token) {

@@ -22,13 +22,13 @@ Append new information where appropriate.
 
 # Current Phase
 
-Core Authentication
+Session and Device Management
 
 ---
 
 # Current Sprint
 
-Sprint 02
+Sprint 03
 
 ---
 
@@ -99,11 +99,25 @@ Sprint 02 verification completed:
 - Logout returns `204 No Content` and revokes the token.
 - Refresh tokens are stored as SHA-256 hashes and plaintext tokens are never stored.
 
+Sprint 03 completed on 2026-07-07.
+
+Sprint 03 delivered production-ready session and device management. It added five session endpoints (list, current, revoke by id, revoke current, revoke all), automatic session creation on login and refresh, device fingerprinting via User-Agent parsing (browser, OS, device name), session ID embedded in JWT access tokens for current-session identification, and simultaneous session-refresh token revocation. Added `SessionService`, `SessionController`, `Session` entity, `SessionRepository`, `SessionResponse` DTO, `UserAgentParser`, `SessionNotFoundException`, `JwtAuthenticationFilter` for Bearer token validation, and a Flyway sessions table migration. Modified `AuthenticationService` and `AuthenticationController` to accept and forward device/network context (IP address, User-Agent).
+
+Sprint 03 verification completed:
+
+- `./gradlew.bat build` succeeds (51 total tests: 28 unit + 22 integration + 1 API doc).
+- Unit tests cover `UserAgentParser` browser/OS/device parsing with 5 UA scenarios, `SessionService` create/list/revoke/revoke-all operations with user ownership checks.
+- Integration tests cover login creates session, list sessions returns device info, get current session, revoke single/current/all sessions, 404 for non-existent session, forbidden without auth, and multiple logins create multiple sessions.
+- Access tokens include `sessionId` claim.
+- Sessions are revoked together with their associated refresh tokens.
+- `docker compose --env-file .env.example up --build -d` starts the stack.
+- Flyway schema history contains successful migration `4 - Create sessions table`.
+
 ---
 
 # Work In Progress
 
-No active sprint implementation is in progress. Awaiting review before Sprint 03.
+No active sprint implementation is in progress. Awaiting review before Sprint 04.
 
 ---
 
@@ -115,7 +129,7 @@ Session Management
 
 Sprint 04
 
-Authorization (RBAC)
+Authorization (RBAC) - PENDING
 
 Sprint 05
 
@@ -148,6 +162,23 @@ Admin Portal
 Sprint 12
 
 Production Deployment
+
+---
+
+# Test Results
+
+Total tests after Sprint 03: 51 (28 unit, 22 integration, 1 OpenAPI documentation test).
+
+Test breakdown:
+
+- `src/test/java/com/secureauthx/server/auth/service/AuthenticationServiceTests.java`: 13 tests (login, refresh, logout, token rotation)
+- `src/test/java/com/secureauthx/server/auth/jwt/JwtServiceTests.java`: 4 tests (token creation, validation, tamper detection)
+- `src/test/java/com/secureauthx/server/auth/controller/AuthenticationControllerIntegrationTests.java`: 7 tests (register, login, refresh, logout, validation errors)
+- `src/test/java/com/secureauthx/server/sessions/service/SessionServiceTests.java`: 5 tests (create, list, revoke by id, revoke all, ownership check)
+- `src/test/java/com/secureauthx/server/sessions/service/UserAgentParserTests.java`: 5 tests (Chrome/Windows, Firefox/macOS, Safari/iOS, Edge/Android, null, empty)
+- `src/test/java/com/secureauthx/server/sessions/controller/SessionControllerIntegrationTests.java`: 7 tests (login creates session, list, current, revoke by id, revoke current, revoke all, multiple logins, not found, forbidden)
+- `src/test/java/com/secureauthx/server/config/OpenApiConfigTests.java`: 1 test (OpenAPI documentation)
+- `src/test/java/com/secureauthx/server/ServerApplicationTests.java`: 1 test (context loads)
 
 ---
 
@@ -197,6 +228,10 @@ Access Token Expiration
 
 15 minutes (configurable via `SECUREAUTHX_JWT_ACCESS_TOKEN_EXPIRATION_MINUTES`)
 
+Access Token Claims
+
+`sub` (user id UUID), `email`, `sessionId` (UUID of the current session)
+
 Refresh Token Expiration
 
 7 days (configurable via `SECUREAUTHX_JWT_REFRESH_TOKEN_EXPIRATION_DAYS`)
@@ -239,15 +274,15 @@ ACTIVE
 
 Architecture
 
-UPDATED FOR SPRINT 02
+UPDATED FOR SPRINT 03
 
 Database
 
-UPDATED FOR SPRINT 02
+UPDATED FOR SPRINT 03
 
 API
 
-UPDATED FOR SPRINT 02
+UPDATED FOR SPRINT 03
 
 ---
 

@@ -3,6 +3,7 @@ package com.secureauthx.server.common.exception;
 import com.secureauthx.server.auth.exception.DuplicateEmailException;
 import com.secureauthx.server.auth.exception.InvalidCredentialsException;
 import com.secureauthx.server.auth.exception.InvalidTokenException;
+import com.secureauthx.server.sessions.exception.SessionNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
@@ -71,6 +72,19 @@ public class GlobalExceptionHandler {
     ) {
         return buildResponse(
                 HttpStatus.UNAUTHORIZED,
+                exception.getMessage(),
+                request.getRequestURI(),
+                Map.of()
+        );
+    }
+
+    @ExceptionHandler(SessionNotFoundException.class)
+    ResponseEntity<ApiErrorResponse> handleSessionNotFound(
+            SessionNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.NOT_FOUND,
                 exception.getMessage(),
                 request.getRequestURI(),
                 Map.of()

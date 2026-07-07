@@ -19,6 +19,8 @@ import com.secureauthx.server.auth.exception.InvalidTokenException;
 import com.secureauthx.server.auth.jwt.JwtService;
 import com.secureauthx.server.auth.repository.RefreshTokenRepository;
 import com.secureauthx.server.auth.repository.UserRepository;
+import com.secureauthx.server.sessions.entity.Session;
+import com.secureauthx.server.sessions.service.SessionService;
 import java.time.OffsetDateTime;
 import java.util.Optional;
 import java.util.UUID;
@@ -46,6 +48,9 @@ class AuthenticationServiceTests {
     @Mock
     private JwtService jwtService;
 
+    @Mock
+    private SessionService sessionService;
+
     @Captor
     private ArgumentCaptor<RefreshToken> refreshTokenCaptor;
 
@@ -53,14 +58,31 @@ class AuthenticationServiceTests {
 
     private static final String ACCESS_TOKEN = "access-token";
     private static final long EXPIRES_IN = 900;
+    private static final String IP_ADDRESS = "192.168.1.1";
+    private static final String USER_AGENT = "Mozilla/5.0 Chrome/120";
 
     @BeforeEach
     void setUp() {
         authenticationService = new AuthenticationService(
-                userRepository, refreshTokenRepository, passwordEncoder, jwtService, 7
+                userRepository, refreshTokenRepository, passwordEncoder, jwtService, sessionService, 7
         );
-        lenient().when(jwtService.createAccessToken(any(UUID.class), anyString())).thenReturn(ACCESS_TOKEN);
+        lenient().when(jwtService.createAccessToken(any(UUID.class), anyString(), any())).thenReturn(ACCESS_TOKEN);
         lenient().when(jwtService.getAccessTokenExpirationSeconds()).thenReturn(EXPIRES_IN);
+        lenient().when(sessionService.createSession(any(), any(), anyString(), anyString()))
+                .thenAnswer(invocation -> {
+                    Session session = new Session(
+                            invocation.getArgument(0),
+                            invocation.getArgument(1),
+                            OffsetDateTime.now().plusDays(7),
+                            invocation.getArgument(2),
+                            invocation.getArgument(3),
+                            "Windows PC", "Windows", "Chrome"
+                    );
+                    java.lang.reflect.Field idField = Session.class.getDeclaredField("id");
+                    idField.setAccessible(true);
+                    idField.set(session, UUID.randomUUID());
+                    return session;
+                });
     }
 
     @Test
@@ -75,7 +97,7 @@ class AuthenticationServiceTests {
         when(passwordEncoder.matches("S3cureExample!2026", passwordHash)).thenReturn(true);
 
         LoginRequest request = new LoginRequest("  User@Example.COM  ", "S3cureExample!2026");
-        TokenResponse response = authenticationService.login(request);
+        TokenResponse response = authenticationService.login(request, IP_ADDRESS, USER_AGENT);
 
         assertThat(response.accessToken()).isEqualTo(ACCESS_TOKEN);
         assertThat(response.refreshToken()).isNotBlank();
@@ -94,7 +116,7 @@ class AuthenticationServiceTests {
         when(userRepository.findByEmail("unknown@example.com")).thenReturn(Optional.empty());
 
         LoginRequest request = new LoginRequest("unknown@example.com", "S3cureExample!2026");
-        assertThatThrownBy(() -> authenticationService.login(request))
+        assertThatThrownBy(() -> authenticationService.login(request, IP_ADDRESS, USER_AGENT))
                 .isInstanceOf(InvalidCredentialsException.class);
 
         verify(passwordEncoder, never()).matches(anyString(), anyString());
@@ -110,7 +132,7 @@ class AuthenticationServiceTests {
         when(passwordEncoder.matches("wrong-password", user.getPasswordHash())).thenReturn(false);
 
         LoginRequest request = new LoginRequest(email, "wrong-password");
-        assertThatThrownBy(() -> authenticationService.login(request))
+        assertThatThrownBy(() -> authenticationService.login(request, IP_ADDRESS, USER_AGENT))
                 .isInstanceOf(InvalidCredentialsException.class);
 
         verify(refreshTokenRepository, never()).save(any());
@@ -129,7 +151,7 @@ class AuthenticationServiceTests {
         when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.of(storedToken));
 
         RefreshTokenRequest request = new RefreshTokenRequest("valid-refresh-token");
-        TokenResponse response = authenticationService.refresh(request);
+        TokenResponse response = authenticationService.refresh(request, IP_ADDRESS, USER_AGENT);
 
         assertThat(response.accessToken()).isEqualTo(ACCESS_TOKEN);
         assertThat(response.refreshToken()).isNotBlank();
@@ -150,7 +172,7 @@ class AuthenticationServiceTests {
         when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.of(storedToken));
 
         RefreshTokenRequest request = new RefreshTokenRequest("revoked-token");
-        assertThatThrownBy(() -> authenticationService.refresh(request))
+        assertThatThrownBy(() -> authenticationService.refresh(request, IP_ADDRESS, USER_AGENT))
                 .isInstanceOf(InvalidTokenException.class);
     }
 
@@ -166,7 +188,7 @@ class AuthenticationServiceTests {
         when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.of(storedToken));
 
         RefreshTokenRequest request = new RefreshTokenRequest("expired-token");
-        assertThatThrownBy(() -> authenticationService.refresh(request))
+        assertThatThrownBy(() -> authenticationService.refresh(request, IP_ADDRESS, USER_AGENT))
                 .isInstanceOf(InvalidTokenException.class);
     }
 
@@ -175,7 +197,7 @@ class AuthenticationServiceTests {
         when(refreshTokenRepository.findByTokenHash(anyString())).thenReturn(Optional.empty());
 
         RefreshTokenRequest request = new RefreshTokenRequest("nonexistent-token");
-        assertThatThrownBy(() -> authenticationService.refresh(request))
+        assertThatThrownBy(() -> authenticationService.refresh(request, IP_ADDRESS, USER_AGENT))
                 .isInstanceOf(InvalidTokenException.class);
     }
 

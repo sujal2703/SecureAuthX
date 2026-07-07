@@ -10,6 +10,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -46,8 +47,11 @@ public class AuthenticationController {
                     )
             }
     )
-    ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
-        TokenResponse response = authenticationService.login(request);
+    ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request,
+                                         HttpServletRequest httpRequest) {
+        String ipAddress = httpRequest.getRemoteAddr();
+        String userAgent = httpRequest.getHeader("User-Agent");
+        TokenResponse response = authenticationService.login(request, ipAddress, userAgent);
         return ResponseEntity.ok(response);
     }
 
@@ -69,8 +73,11 @@ public class AuthenticationController {
                     )
             }
     )
-    ResponseEntity<TokenResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
-        TokenResponse response = authenticationService.refresh(request);
+    ResponseEntity<TokenResponse> refresh(@Valid @RequestBody RefreshTokenRequest request,
+                                           HttpServletRequest httpRequest) {
+        String ipAddress = httpRequest.getRemoteAddr();
+        String userAgent = httpRequest.getHeader("User-Agent");
+        TokenResponse response = authenticationService.refresh(request, ipAddress, userAgent);
         return ResponseEntity.ok(response);
     }
 

@@ -10,6 +10,9 @@ import com.secureauthx.server.auth.exception.InvalidTokenException;
 import com.secureauthx.server.auth.jwt.JwtService;
 import com.secureauthx.server.auth.repository.RefreshTokenRepository;
 import com.secureauthx.server.auth.repository.UserRepository;
+import com.secureauthx.server.sessions.entity.Session;
+import com.secureauthx.server.sessions.service.SessionService;
+import java.security.MessageDigest;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.OffsetDateTime;
@@ -31,6 +34,7 @@ public class AuthenticationService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final SessionService sessionService;
     private final long refreshTokenExpirationDays;
 
     public AuthenticationService(
@@ -38,17 +42,19 @@ public class AuthenticationService {
             RefreshTokenRepository refreshTokenRepository,
             PasswordEncoder passwordEncoder,
             JwtService jwtService,
+            SessionService sessionService,
             @Value("${secureauthx.jwt.refresh-token-expiration-days:7}") long refreshTokenExpirationDays
     ) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.sessionService = sessionService;
         this.refreshTokenExpirationDays = refreshTokenExpirationDays;
     }
 
     @Transactional
-    public TokenResponse login(LoginRequest request) {
+    public TokenResponse login(LoginRequest request, String ipAddress, String userAgent) {
         String normalizedEmail = normalizeEmail(request.email());
         User user = userRepository.findByEmail(normalizedEmail)
                 .orElseThrow(InvalidCredentialsException::new);
@@ -60,9 +66,12 @@ public class AuthenticationService {
         String rawRefreshToken = generateRefreshTokenString();
         String tokenHash = hashToken(rawRefreshToken);
         OffsetDateTime expiresAt = OffsetDateTime.now().plusDays(refreshTokenExpirationDays);
-        refreshTokenRepository.save(new RefreshToken(user, tokenHash, expiresAt));
+        RefreshToken refreshToken = new RefreshToken(user, tokenHash, expiresAt);
+        refreshTokenRepository.save(refreshToken);
 
-        String accessToken = jwtService.createAccessToken(user.getId(), user.getEmail());
+        Session session = sessionService.createSession(user, refreshToken, ipAddress, userAgent);
+
+        String accessToken = jwtService.createAccessToken(user.getId(), user.getEmail(), session.getId());
 
         LOGGER.info("User login successful for user_id={}", user.getId());
 
@@ -75,7 +84,7 @@ public class AuthenticationService {
     }
 
     @Transactional
-    public TokenResponse refresh(RefreshTokenRequest request) {
+    public TokenResponse refresh(RefreshTokenRequest request, String ipAddress, String userAgent) {
         String tokenHash = hashToken(request.refreshToken());
         RefreshToken storedToken = refreshTokenRepository.findByTokenHash(tokenHash)
                 .orElseThrow(() -> new InvalidTokenException("Refresh token not found."));
@@ -94,11 +103,15 @@ public class AuthenticationService {
         String rawRefreshToken = generateRefreshTokenString();
         String newTokenHash = hashToken(rawRefreshToken);
         OffsetDateTime expiresAt = OffsetDateTime.now().plusDays(refreshTokenExpirationDays);
-        refreshTokenRepository.save(new RefreshToken(storedToken.getUser(), newTokenHash, expiresAt));
+        RefreshToken newRefreshToken = new RefreshToken(storedToken.getUser(), newTokenHash, expiresAt);
+        refreshTokenRepository.save(newRefreshToken);
+
+        Session session = sessionService.createSession(storedToken.getUser(), newRefreshToken, ipAddress, userAgent);
 
         String accessToken = jwtService.createAccessToken(
                 storedToken.getUser().getId(),
-                storedToken.getUser().getEmail()
+                storedToken.getUser().getEmail(),
+                session.getId()
         );
 
         LOGGER.info("Token refresh successful for user_id={}", storedToken.getUser().getId());

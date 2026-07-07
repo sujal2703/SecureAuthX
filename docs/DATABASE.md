@@ -64,6 +64,36 @@ Security notes:
 - Revoked tokens remain in the database with a `revoked_at` timestamp for audit purposes.
 - Expired tokens can be cleaned up periodically via `idx_refresh_tokens_expires_at`.
 
+### `V4__Create_sessions_table.sql`
+
+Creates the `sessions` table for Sprint 03 session and device management.
+
+Columns:
+
+- `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+- `user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE`
+- `refresh_token_id UUID REFERENCES refresh_tokens(id) ON DELETE CASCADE`
+- `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`
+- `last_activity_at TIMESTAMPTZ NOT NULL DEFAULT now()`
+- `expires_at TIMESTAMPTZ NOT NULL`
+- `revoked_at TIMESTAMPTZ` (null until revoked)
+- `ip_address VARCHAR(45)` (supports IPv4 and IPv6)
+- `user_agent TEXT`
+- `device_name VARCHAR(255)`
+- `operating_system VARCHAR(100)`
+- `browser VARCHAR(100)`
+
+Constraints and indexes:
+
+- `idx_sessions_user_id` supports user-based session queries.
+- `idx_sessions_user_revoked_expires` indexes (`user_id`, `revoked_at`, `expires_at`) for active session lookups.
+
+Notes:
+
+- Each session tracks the device that created it via user-agent parsing (browser, OS, device name).
+- The `refresh_token_id` FK links sessions to their refresh token for simultaneous revocation.
+- Sessions auto-expire after 7 days.
+
 ## Security
 
 - Plaintext passwords are never stored.
