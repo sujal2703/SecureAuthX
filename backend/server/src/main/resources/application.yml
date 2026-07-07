@@ -63,6 +63,11 @@ springdoc:
     operations-sorter: method
     tags-sorter: alpha
 
+secureauthx:
+  jwt:
+    access-token-expiration-minutes: ${SECUREAUTHX_JWT_ACCESS_TOKEN_EXPIRATION_MINUTES:15}
+    refresh-token-expiration-days: ${SECUREAUTHX_JWT_REFRESH_TOKEN_EXPIRATION_DAYS:7}
+
 logging:
   level:
     root: ${SECUREAUTHX_LOG_LEVEL:INFO}

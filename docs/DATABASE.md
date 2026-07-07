@@ -38,10 +38,37 @@ Constraints and indexes:
 - `chk_users_password_hash_not_blank` rejects blank password hashes.
 - `idx_users_created_at` supports creation-time queries.
 
+### `V3__Create_refresh_tokens_table.sql`
+
+Creates the `refresh_tokens` table for Sprint 02 token management.
+
+Columns:
+
+- `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+- `user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE`
+- `token_hash VARCHAR(64) NOT NULL`
+- `expires_at TIMESTAMPTZ NOT NULL`
+- `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`
+- `revoked_at TIMESTAMPTZ` (null until revoked)
+
+Constraints and indexes:
+
+- `uk_refresh_tokens_token_hash` enforces unique token hashes.
+- `idx_refresh_tokens_user_id` supports user-based queries.
+- `idx_refresh_tokens_token_hash` supports token lookup.
+- `idx_refresh_tokens_expires_at` supports expiry cleanup.
+
 Security notes:
+
+- Only the SHA-256 hash of each refresh token is stored. Plaintext tokens are never persisted.
+- Revoked tokens remain in the database with a `revoked_at` timestamp for audit purposes.
+- Expired tokens can be cleaned up periodically via `idx_refresh_tokens_expires_at`.
+
+## Security
 
 - Plaintext passwords are never stored.
 - Passwords are hashed with Argon2id through Spring Security.
+- Refresh tokens are stored as SHA-256 hashes.
 - Email addresses are normalized before persistence.
 
 ## Local Configuration

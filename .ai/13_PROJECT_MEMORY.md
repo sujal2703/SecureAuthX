@@ -22,13 +22,13 @@ Append new information where appropriate.
 
 # Current Phase
 
-Foundation
+Core Authentication
 
 ---
 
 # Current Sprint
 
-Sprint 01
+Sprint 02
 
 ---
 
@@ -81,19 +81,33 @@ Sprint 01 verification completed:
 - Invalid request returns `400 Bad Request`.
 - Password hashes are stored with the Argon2id format and plaintext passwords are not stored.
 
+Sprint 02 completed on 2026-07-07.
+
+Sprint 02 delivered a production-ready authentication engine. It added login, token refresh, and logout endpoints. It implemented RS256 JWT access tokens, refresh token persistence with SHA-256 hashing, token rotation on refresh, and revocable refresh tokens. Added `JwtService` for JWT creation and validation, `AuthenticationService` for login/refresh/logout orchestration, `AuthenticationController` with three endpoints, `RefreshToken` entity, `RefreshTokenRepository`, login and refresh token DTOs, `InvalidCredentialsException`, `InvalidTokenException`, and a Flyway refresh tokens table migration.
+
+Sprint 02 verification completed:
+
+- `./gradlew.bat build` succeeds.
+- Unit tests cover JWT token creation and validation, login with valid/invalid credentials, refresh with valid/revoked/expired/non-existent tokens, and logout with existing and non-existent tokens.
+- Integration tests cover full login flow, invalid credential rejection, token refresh with rotation, revoked token rejection, logout with revocation, and validation error responses using Testcontainers and PostgreSQL.
+- `docker compose --env-file .env.example up --build -d` starts the stack.
+- Flyway schema history contains successful migration `3 - Create refresh tokens table`.
+- Login returns `200 OK` with access and refresh tokens for valid credentials.
+- Login returns `401 Unauthorized` for invalid credentials without distinguishing email vs password.
+- Refresh returns `200 OK` with rotated tokens for a valid refresh token.
+- Refresh returns `401 Unauthorized` for revoked, expired, or non-existent tokens.
+- Logout returns `204 No Content` and revokes the token.
+- Refresh tokens are stored as SHA-256 hashes and plaintext tokens are never stored.
+
 ---
 
 # Work In Progress
 
-No active sprint implementation is in progress. Awaiting review before Sprint 02.
+No active sprint implementation is in progress. Awaiting review before Sprint 03.
 
 ---
 
 # Pending Work
-
-Sprint 02
-
-User Login
 
 Sprint 03
 
@@ -171,6 +185,30 @@ Authentication Strategy
 
 JWT + Refresh Tokens
 
+JWT Algorithm
+
+RS256 (asymmetric RSA with SHA-256)
+
+JWT Key Size
+
+2048 bits
+
+Access Token Expiration
+
+15 minutes (configurable via `SECUREAUTHX_JWT_ACCESS_TOKEN_EXPIRATION_MINUTES`)
+
+Refresh Token Expiration
+
+7 days (configurable via `SECUREAUTHX_JWT_REFRESH_TOKEN_EXPIRATION_DAYS`)
+
+Refresh Token Storage
+
+SHA-256 hash of the token value. Plaintext tokens are never stored.
+
+Token Rotation
+
+Each refresh invalidates the previous refresh token.
+
 Password Hashing
 
 Argon2id
@@ -187,6 +225,8 @@ No known blocking issues.
 
 Non-blocking improvement identified: Docker backend image builds currently download Gradle dependencies during image build. This is acceptable for Sprint 00 but should be optimized with better Docker layer caching in a future infrastructure refinement.
 
+Ephemeral JWT key pair: When `SECUREAUTHX_JWT_PRIVATE_KEY` and `SECUREAUTHX_JWT_PUBLIC_KEY` are not set, the application generates an ephemeral RSA key pair on startup. Access tokens signed with this key become invalid after a restart. This is acceptable for development but production deployments must configure persistent keys via those environment variables.
+
 If new issues arise they must be recorded here.
 
 ---
@@ -199,15 +239,15 @@ ACTIVE
 
 Architecture
 
-UPDATED FOR SPRINT 01
+UPDATED FOR SPRINT 02
 
 Database
 
-UPDATED FOR SPRINT 01
+UPDATED FOR SPRINT 02
 
 API
 
-UPDATED FOR SPRINT 01
+UPDATED FOR SPRINT 02
 
 ---
 
@@ -236,4 +276,3 @@ Current Sprint
 This document is the long-term memory of SecureAuthX.
 
 Never remove historical project information.
-

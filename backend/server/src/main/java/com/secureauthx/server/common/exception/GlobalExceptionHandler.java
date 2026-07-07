@@ -1,6 +1,8 @@
 package com.secureauthx.server.common.exception;
 
 import com.secureauthx.server.auth.exception.DuplicateEmailException;
+import com.secureauthx.server.auth.exception.InvalidCredentialsException;
+import com.secureauthx.server.auth.exception.InvalidTokenException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.OffsetDateTime;
 import java.util.LinkedHashMap;
@@ -44,6 +46,32 @@ public class GlobalExceptionHandler {
         return buildResponse(
                 HttpStatus.CONFLICT,
                 "Email is already registered.",
+                request.getRequestURI(),
+                Map.of()
+        );
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    ResponseEntity<ApiErrorResponse> handleInvalidCredentials(
+            InvalidCredentialsException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.UNAUTHORIZED,
+                exception.getMessage(),
+                request.getRequestURI(),
+                Map.of()
+        );
+    }
+
+    @ExceptionHandler(InvalidTokenException.class)
+    ResponseEntity<ApiErrorResponse> handleInvalidToken(
+            InvalidTokenException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.UNAUTHORIZED,
+                exception.getMessage(),
                 request.getRequestURI(),
                 Map.of()
         );
