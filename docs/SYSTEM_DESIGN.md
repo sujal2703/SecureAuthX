@@ -11,6 +11,7 @@ Feature modules live under `com.secureauthx.server` using feature-first package 
 - `auth`: registration, login, token refresh, and logout. Contains controller, service, repository, entities, DTOs, mapper, validation, JWT service, and auth-specific exceptions.
 - `sessions`: session and device management. Contains controller, service, repository, entity, DTOs, UserAgentParser, and session-specific exceptions.
 - `authorization`: role-based access control. Contains controller, service, repository, entities, DTOs, and authority loading.
+- `organization`: organizations and multi-tenancy foundation. Contains controller, service, repository, entities, DTOs, and org-specific exceptions.
 - `common`: shared API error response and global exception handling.
 - `config`: security, JWT authentication filter, and OpenAPI configuration.
 
@@ -65,6 +66,13 @@ Sprint 04 RBAC endpoints require a valid Bearer JWT access token:
 - `GET /api/v1/roles`
 - `GET /api/v1/permissions`
 
+Sprint 05 organization endpoints require a valid Bearer JWT access token:
+
+- `GET /api/v1/organizations`
+- `GET /api/v1/organizations/current`
+- `POST /api/v1/organizations`
+- `PATCH /api/v1/organizations/{organizationId}`
+
 All other routes are denied by default until authorization flows are implemented in later sprints.
 
 ## Authorization Model
@@ -77,9 +85,21 @@ Method-level security is enabled via `@EnableMethodSecurity`. Controllers use `@
 
 Every newly registered user automatically receives `ROLE_USER`. No administrator is automatically created.
 
+## Organization Model
+
+Organizations provide a multi-tenancy foundation. Each user has exactly one personal organization (created automatically at registration) and can create or join additional organizations.
+
+Organization-level roles (`OWNER`, `ADMIN`, `MEMBER`) govern what a user can do within an organization. These roles are stored in the `organization_members` table, separate from the global RBAC `roles` table, and are never merged.
+
+- `OWNER`: full control over the organization (rename, manage members, delete)
+- `ADMIN`: can update organization metadata
+- `MEMBER`: read-only access to the organization
+
+On every authenticated organization request, the `OrganizationService` loads the user's organization role from the database and enforces access rules. Ownership or admin-level authorization (`OWNER` or `ADMIN`) is required for mutation operations.
+
 ## Authentication Flow
 
-1. **Registration**: User submits email and password via `POST /api/v1/auth/register`. Password is hashed with Argon2id. User record is created. No session or token is issued.
+1. **Registration**: User submits email and password via `POST /api/v1/auth/register`. Password is hashed with Argon2id. User record is created. A personal organization is automatically created with the user as `OWNER`. No session or token is issued.
 
 2. **Login**: User submits email and password via `POST /api/v1/auth/login`. Password is verified against the Argon2id hash. On success, an RS256-signed JWT access token and a refresh token are returned. The refresh token is stored as a SHA-256 hash. A session record is created with device information parsed from the User-Agent header.
 

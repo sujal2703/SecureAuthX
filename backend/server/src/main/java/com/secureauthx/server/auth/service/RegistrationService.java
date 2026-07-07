@@ -10,6 +10,7 @@ import com.secureauthx.server.authorization.entity.Role;
 import com.secureauthx.server.authorization.entity.UserRole;
 import com.secureauthx.server.authorization.repository.RoleRepository;
 import com.secureauthx.server.authorization.repository.UserRoleRepository;
+import com.secureauthx.server.organization.service.OrganizationService;
 import java.util.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,19 +28,22 @@ public class RegistrationService {
     private final UserMapper userMapper;
     private final RoleRepository roleRepository;
     private final UserRoleRepository userRoleRepository;
+    private final OrganizationService organizationService;
 
     public RegistrationService(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             UserMapper userMapper,
             RoleRepository roleRepository,
-            UserRoleRepository userRoleRepository
+            UserRoleRepository userRoleRepository,
+            OrganizationService organizationService
     ) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.userMapper = userMapper;
         this.roleRepository = roleRepository;
         this.userRoleRepository = userRoleRepository;
+        this.organizationService = organizationService;
     }
 
     @Transactional
@@ -56,7 +60,9 @@ public class RegistrationService {
                 .orElseThrow(() -> new IllegalStateException("Default role ROLE_USER not found"));
         userRoleRepository.save(new UserRole(user, userRole));
 
-        LOGGER.info("User registration completed for user_id={} with role=USER", user.getId());
+        organizationService.createPersonalOrganization(user);
+
+        LOGGER.info("User registration completed for user_id={} with role=USER and personal org", user.getId());
         return userMapper.toRegistrationResponse(user);
     }
 

@@ -41,6 +41,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/sessions", "/api/v1/sessions/current").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/sessions/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/roles", "/api/v1/permissions").authenticated()
+                        .requestMatchers("/api/v1/organizations/**").authenticated()
                         .anyRequest().denyAll())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .httpBasic(AbstractHttpConfigurer::disable)

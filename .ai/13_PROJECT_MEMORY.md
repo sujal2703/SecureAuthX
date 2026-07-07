@@ -22,13 +22,13 @@ Append new information where appropriate.
 
 # Current Phase
 
-Role-Based Access Control
+Multi-Tenancy Foundation
 
 ---
 
 # Current Sprint
 
-Sprint 04
+Sprint 05
 
 ---
 
@@ -126,11 +126,23 @@ Sprint 04 verification completed:
 - Flyway schema history contains successful migration `5 - Create RBAC tables`.
 - `docker compose --env-file .env.example up --build -d` starts the stack.
 
+Sprint 05 completed on 2026-07-07.
+
+Sprint 05 delivered organizations and multi-tenancy foundation. It added organizations and organization_members tables via Flyway V6 with OWNER, ADMIN, MEMBER roles. Implemented `Organization`, `OrganizationMember`, `OrganizationRole` entities with repositories using `JOIN FETCH` queries. Added `OrganizationService` (create personal org, create org, list, get current, update with OWNER/ADMIN check), `OrganizationController` with four endpoints (GET list, GET current, POST create, PATCH update), DTOs, and org-specific exceptions. Modified `RegistrationService` to auto-create a personal organization with OWNER role on registration. Modified `SecurityConfig`, `GlobalExceptionHandler`, and test cleanup to support shared H2 context across integration tests.
+
+Sprint 05 verification completed:
+
+- `./gradlew.bat build` succeeds (75 total tests: 38 unit + 36 integration + 1 API doc).
+- Unit tests cover `OrganizationService` create personal org, create org, list, get current, update as OWNER, update as MEMBER throws.
+- Integration tests cover list orgs, get current org, create org, update org, unauthenticated forbidden, member cannot update, registration creates personal org.
+- Flyway schema history contains successful migration `6 - Create organizations tables`.
+- `docker compose --env-file .env.example up --build -d` starts the stack (pending verification).
+
 ---
 
 # Work In Progress
 
-No active sprint implementation is in progress. Awaiting review before Sprint 05.
+No active sprint implementation is in progress. Awaiting review before Sprint 06.
 
 ---
 
@@ -146,9 +158,7 @@ Authorization (RBAC)
 
 Sprint 05
 
-Sprint 05
-
-Organizations
+Organizations & Multi-Tenancy Foundation
 
 Sprint 06
 
@@ -182,7 +192,7 @@ Production Deployment
 
 # Test Results
 
-Total tests after Sprint 04: 62 (33 unit, 28 integration, 1 OpenAPI documentation test).
+Total tests after Sprint 05: 75 (38 unit, 36 integration, 1 OpenAPI documentation test).
 
 Test breakdown:
 
@@ -197,6 +207,8 @@ Test breakdown:
 - `src/test/java/com/secureauthx/server/authorization/service/PermissionServiceTests.java`: 2 tests (returns all permissions, returns empty list)
 - `src/test/java/com/secureauthx/server/authorization/service/UserAuthorityServiceTests.java`: 2 tests (loads role and permission authorities, returns empty for user with no roles)
 - `src/test/java/com/secureauthx/server/authorization/controller/AuthorizationControllerIntegrationTests.java`: 5 tests (user can list roles, user can list permissions, unauthenticated returns forbidden for roles and permissions, response does not expose internal mappings)
+- `src/test/java/com/secureauthx/server/organization/service/OrganizationServiceTests.java`: 6 tests (create personal org, create org, list orgs, get current org, update as OWNER, update as MEMBER throws)
+- `src/test/java/com/secureauthx/server/organization/controller/OrganizationControllerIntegrationTests.java`: 8 tests (list orgs, get current, create org, update, unauthenticated forbidden, member cannot update, registration creates personal org)
 - `src/test/java/com/secureauthx/server/config/OpenApiConfigTests.java`: 1 test (OpenAPI documentation)
 - `src/test/java/com/secureauthx/server/ServerApplicationTests.java`: 1 test (context loads)
 
@@ -298,15 +310,15 @@ ACTIVE
 
 Architecture
 
-UPDATED FOR SPRINT 04
+UPDATED FOR SPRINT 05
 
 Database
 
-UPDATED FOR SPRINT 04
+UPDATED FOR SPRINT 05
 
 API
 
-UPDATED FOR SPRINT 04
+UPDATED FOR SPRINT 05
 
 ---
 

@@ -15,6 +15,8 @@ import com.secureauthx.server.authorization.entity.Role;
 import com.secureauthx.server.authorization.entity.UserRole;
 import com.secureauthx.server.authorization.repository.RoleRepository;
 import com.secureauthx.server.authorization.repository.UserRoleRepository;
+import com.secureauthx.server.organization.entity.Organization;
+import com.secureauthx.server.organization.service.OrganizationService;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,6 +44,9 @@ class RegistrationServiceTests {
     @Mock
     private UserRoleRepository userRoleRepository;
 
+    @Mock
+    private OrganizationService organizationService;
+
     @InjectMocks
     private RegistrationService registrationService;
 
@@ -53,6 +58,8 @@ class RegistrationServiceTests {
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(roleRepository.findByName("USER")).thenReturn(Optional.of(new Role("USER", "Standard user")));
         when(userRoleRepository.save(any(UserRole.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(organizationService.createPersonalOrganization(any()))
+                .thenReturn(new Organization("Test", "test", true));
 
         registrationService.register(request);
 
@@ -63,6 +70,7 @@ class RegistrationServiceTests {
         org.assertj.core.api.Assertions.assertThat(savedUser.getEmail()).isEqualTo("developer@example.com");
         org.assertj.core.api.Assertions.assertThat(savedUser.getPasswordHash()).isEqualTo("$argon2id$hash");
         verify(userRoleRepository).save(any(UserRole.class));
+        verify(organizationService).createPersonalOrganization(any());
     }
 
     @Test

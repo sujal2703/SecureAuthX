@@ -72,6 +72,41 @@ Creates the `sessions` table for Sprint 03 session and device management.
 
 Creates the RBAC tables for Sprint 04 role-based access control.
 
+### `V6__Create_organizations_tables.sql`
+
+Creates the organizations and organization_members tables for Sprint 05 multi-tenancy foundation.
+
+Tables:
+
+- `organizations` — defines organizations (personal and non-personal).
+- `organization_members` — maps users to organizations with organization-level roles.
+
+Columns for `organizations`:
+
+- `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+- `name VARCHAR(255) NOT NULL`
+- `slug VARCHAR(255) NOT NULL UNIQUE`
+- `is_personal BOOLEAN NOT NULL DEFAULT false`
+- `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`
+- `updated_at TIMESTAMPTZ NOT NULL DEFAULT now()`
+
+Columns for `organization_members`:
+
+- `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+- `organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE`
+- `user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE`
+- `role VARCHAR(20) NOT NULL DEFAULT 'MEMBER'`
+- `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`
+
+Constraints and indexes:
+
+- `idx_organizations_slug` unique index on slug.
+- `idx_organization_members_organization_id` for member lookups by org.
+- `idx_organization_members_user_id` for org lookups by user.
+- `idx_organization_members_unique` unique constraint on (organization_id, user_id).
+
+Organization-level roles: `OWNER`, `ADMIN`, `MEMBER`.
+
 Tables:
 
 - `roles` — defines available roles (USER, ADMIN).

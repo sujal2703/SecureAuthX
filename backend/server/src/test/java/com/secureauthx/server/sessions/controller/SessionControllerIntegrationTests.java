@@ -13,6 +13,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.secureauthx.server.auth.entity.User;
 import com.secureauthx.server.auth.repository.RefreshTokenRepository;
 import com.secureauthx.server.auth.repository.UserRepository;
+import com.secureauthx.server.organization.repository.OrganizationMemberRepository;
+import com.secureauthx.server.organization.repository.OrganizationRepository;
+import com.secureauthx.server.authorization.repository.UserRoleRepository;
 import com.secureauthx.server.sessions.repository.SessionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,8 +53,20 @@ class SessionControllerIntegrationTests {
     @Autowired
     private RefreshTokenRepository refreshTokenRepository;
 
+    @Autowired
+    private OrganizationRepository organizationRepository;
+
+    @Autowired
+    private OrganizationMemberRepository organizationMemberRepository;
+
+    @Autowired
+    private UserRoleRepository userRoleRepository;
+
     @BeforeEach
     void setUp() {
+        userRoleRepository.deleteAll();
+        organizationMemberRepository.deleteAll();
+        organizationRepository.deleteAll();
         sessionRepository.deleteAll();
         refreshTokenRepository.deleteAll();
         userRepository.deleteAll();

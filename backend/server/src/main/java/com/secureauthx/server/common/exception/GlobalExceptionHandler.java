@@ -3,6 +3,8 @@ package com.secureauthx.server.common.exception;
 import com.secureauthx.server.auth.exception.DuplicateEmailException;
 import com.secureauthx.server.auth.exception.InvalidCredentialsException;
 import com.secureauthx.server.auth.exception.InvalidTokenException;
+import com.secureauthx.server.organization.exception.OrganizationAccessDeniedException;
+import com.secureauthx.server.organization.exception.OrganizationNotFoundException;
 import com.secureauthx.server.sessions.exception.SessionNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.OffsetDateTime;
@@ -85,6 +87,32 @@ public class GlobalExceptionHandler {
     ) {
         return buildResponse(
                 HttpStatus.NOT_FOUND,
+                exception.getMessage(),
+                request.getRequestURI(),
+                Map.of()
+        );
+    }
+
+    @ExceptionHandler(OrganizationNotFoundException.class)
+    ResponseEntity<ApiErrorResponse> handleOrganizationNotFound(
+            OrganizationNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.NOT_FOUND,
+                exception.getMessage(),
+                request.getRequestURI(),
+                Map.of()
+        );
+    }
+
+    @ExceptionHandler(OrganizationAccessDeniedException.class)
+    ResponseEntity<ApiErrorResponse> handleOrganizationAccessDenied(
+            OrganizationAccessDeniedException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.FORBIDDEN,
                 exception.getMessage(),
                 request.getRequestURI(),
                 Map.of()

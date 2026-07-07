@@ -2,7 +2,7 @@
 
 ## Current API Stage
 
-Sprint 04 adds role-based access control. OAuth, OIDC, and passkeys remain out of scope.
+Sprint 05 adds organizations and multi-tenancy foundation. OAuth, OIDC, and passkeys remain out of scope.
 
 ## Public Foundation Endpoints
 
@@ -315,6 +315,131 @@ Error responses:
 
 - `401 Unauthorized` when the access token is missing, expired, or invalid.
 
+## Organization Endpoints
+
+All organization endpoints require a valid Bearer JWT access token in the `Authorization` header.
+
+### `GET /api/v1/organizations`
+
+Lists all organizations the authenticated user belongs to. Includes the user's role within each organization.
+
+Success response: `200 OK`
+
+```json
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "My Org",
+    "slug": "my-org",
+    "isPersonal": true,
+    "role": "OWNER",
+    "createdAt": "2026-07-07T10:00:00Z",
+    "updatedAt": "2026-07-07T10:00:00Z"
+  }
+]
+```
+
+Error responses:
+
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+
+### `GET /api/v1/organizations/current`
+
+Returns the authenticated user's personal organization. Every user has exactly one personal organization created at registration time.
+
+Success response: `200 OK`
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "My Org",
+  "slug": "my-org",
+  "isPersonal": true,
+  "role": "OWNER",
+  "createdAt": "2026-07-07T10:00:00Z",
+  "updatedAt": "2026-07-07T10:00:00Z"
+}
+```
+
+Error responses:
+
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+- `404 Not Found` when the user has no personal organization.
+
+### `POST /api/v1/organizations`
+
+Creates a new non-personal organization. The authenticated user becomes the `OWNER` of the new organization.
+
+Request:
+
+```json
+{
+  "name": "Acme Corp"
+}
+```
+
+Validation:
+
+- `name` is required and must be 255 characters or fewer.
+
+Success response: `201 Created`
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440001",
+  "name": "Acme Corp",
+  "slug": "acme-corp",
+  "isPersonal": false,
+  "role": "OWNER",
+  "createdAt": "2026-07-07T10:00:00Z",
+  "updatedAt": "2026-07-07T10:00:00Z"
+}
+```
+
+The `Location` header is set to the new organization's resource URI.
+
+Error responses:
+
+- `400 Bad Request` for validation failures.
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+
+### `PATCH /api/v1/organizations/{organizationId}`
+
+Updates organization metadata. Only `OWNER` or `ADMIN` members can update an organization.
+
+Request:
+
+```json
+{
+  "name": "Updated Corp"
+}
+```
+
+Validation:
+
+- At least one field must be provided.
+
+Success response: `200 OK`
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440001",
+  "name": "Updated Corp",
+  "slug": "updated-corp",
+  "isPersonal": false,
+  "role": "OWNER",
+  "createdAt": "2026-07-07T10:00:00Z",
+  "updatedAt": "2026-07-07T10:00:00Z"
+}
+```
+
+Error responses:
+
+- `400 Bad Request` for validation failures.
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+- `403 Forbidden` when the user is not an `OWNER` or `ADMIN` of the organization.
+- `404 Not Found` when the organization does not exist or the user is not a member.
+
 ## Authorization
 
 Authentication is performed via RS256 JWT access tokens. After JWT validation, the user's roles and permissions are loaded from the database and attached to the security context. This enables both `hasRole()` and `hasAuthority()` checks.
@@ -326,6 +451,8 @@ Default permissions for `ROLE_USER`: `SESSION_READ`, `SESSION_REVOKE`, `ROLE_REA
 Default permissions for `ROLE_ADMIN`: all permissions
 
 Administrator accounts are not automatically created.
+
+Organization-level roles (`OWNER`, `ADMIN`, `MEMBER`) are stored separately from global RBAC roles and are never merged.
 
 ## Versioning
 
