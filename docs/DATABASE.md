@@ -68,6 +68,63 @@ Security notes:
 
 Creates the `sessions` table for Sprint 03 session and device management.
 
+### `V5__Create_rbac_tables.sql`
+
+Creates the RBAC tables for Sprint 04 role-based access control.
+
+Tables:
+
+- `roles` — defines available roles (USER, ADMIN).
+- `permissions` — defines available permissions (USER_READ, USER_WRITE, SESSION_READ, SESSION_REVOKE, ROLE_READ, ROLE_WRITE).
+- `user_roles` — maps users to roles.
+- `role_permissions` — maps roles to permissions.
+
+Columns for `roles`:
+
+- `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+- `name VARCHAR(100) NOT NULL UNIQUE`
+- `description VARCHAR(500)`
+- `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`
+- `updated_at TIMESTAMPTZ NOT NULL DEFAULT now()`
+
+Columns for `permissions`:
+
+- `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+- `name VARCHAR(100) NOT NULL UNIQUE`
+- `description VARCHAR(500)`
+- `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`
+- `updated_at TIMESTAMPTZ NOT NULL DEFAULT now()`
+
+Columns for `user_roles`:
+
+- `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+- `user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE`
+- `role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE`
+- `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`
+
+Columns for `role_permissions`:
+
+- `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+- `role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE`
+- `permission_id UUID NOT NULL REFERENCES permissions(id) ON DELETE CASCADE`
+- `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`
+
+Constraints and indexes:
+
+- `idx_roles_name` unique index on role names.
+- `idx_permissions_name` unique index on permission names.
+- `idx_user_roles_user_id` and `idx_user_roles_role_id` for join lookups.
+- `idx_user_roles_unique` unique constraint on (user_id, role_id).
+- `idx_role_permissions_role_id` and `idx_role_permissions_permission_id` for join lookups.
+- `idx_role_permissions_unique` unique constraint on (role_id, permission_id).
+
+Seed data:
+
+- Roles: `USER`, `ADMIN`
+- Permissions: `USER_READ`, `USER_WRITE`, `SESSION_READ`, `SESSION_REVOKE`, `ROLE_READ`, `ROLE_WRITE`
+- `USER` role receives `SESSION_READ`, `SESSION_REVOKE`, `ROLE_READ`
+- `ADMIN` role receives all permissions
+
 Columns:
 
 - `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`

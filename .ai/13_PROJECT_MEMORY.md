@@ -22,13 +22,13 @@ Append new information where appropriate.
 
 # Current Phase
 
-Session and Device Management
+Role-Based Access Control
 
 ---
 
 # Current Sprint
 
-Sprint 03
+Sprint 04
 
 ---
 
@@ -113,11 +113,24 @@ Sprint 03 verification completed:
 - `docker compose --env-file .env.example up --build -d` starts the stack.
 - Flyway schema history contains successful migration `4 - Create sessions table`.
 
+Sprint 04 completed on 2026-07-07.
+
+Sprint 04 delivered production-ready role-based access control. It added RBAC tables (roles, permissions, user_roles, role_permissions) via Flyway V5 with seed data for ROLE_USER, ROLE_ADMIN, and six permissions. Implemented `Role`, `Permission`, `UserRole`, `RolePermission` entities with repositories using `JOIN FETCH` queries. Added `RoleService`, `PermissionService`, `UserAuthorityService` (loads roles/permissions as GrantedAuthority objects), `RoleController`, and `PermissionController` with read-only endpoints. Integrated with Spring Security via `@EnableMethodSecurity` and `@PreAuthorize`. Modified `RegistrationService` to auto-assign ROLE_USER on registration. Modified `JwtAuthenticationFilter` to load authorities on every authenticated request via `UserAuthorityService`. Modified `SecurityConfig` with `@EnableMethodSecurity` and RBAC endpoint access rules.
+
+Sprint 04 verification completed:
+
+- `./gradlew.bat build` succeeds (62 total tests: 33 unit + 28 integration + 1 API doc).
+- Unit tests cover `RoleService` listing, `PermissionService` listing, and `UserAuthorityService` role/permission loading.
+- Integration tests cover authenticated role listing, authenticated permission listing, forbidden for unauthenticated requests, and safe response structure (no internal mappings).
+- `RegistrationService` tests verify ROLE_USER assignment on registration.
+- Flyway schema history contains successful migration `5 - Create RBAC tables`.
+- `docker compose --env-file .env.example up --build -d` starts the stack.
+
 ---
 
 # Work In Progress
 
-No active sprint implementation is in progress. Awaiting review before Sprint 04.
+No active sprint implementation is in progress. Awaiting review before Sprint 05.
 
 ---
 
@@ -129,7 +142,9 @@ Session Management
 
 Sprint 04
 
-Authorization (RBAC) - PENDING
+Authorization (RBAC)
+
+Sprint 05
 
 Sprint 05
 
@@ -167,16 +182,21 @@ Production Deployment
 
 # Test Results
 
-Total tests after Sprint 03: 51 (28 unit, 22 integration, 1 OpenAPI documentation test).
+Total tests after Sprint 04: 62 (33 unit, 28 integration, 1 OpenAPI documentation test).
 
 Test breakdown:
 
 - `src/test/java/com/secureauthx/server/auth/service/AuthenticationServiceTests.java`: 13 tests (login, refresh, logout, token rotation)
 - `src/test/java/com/secureauthx/server/auth/jwt/JwtServiceTests.java`: 4 tests (token creation, validation, tamper detection)
 - `src/test/java/com/secureauthx/server/auth/controller/AuthenticationControllerIntegrationTests.java`: 7 tests (register, login, refresh, logout, validation errors)
+- `src/test/java/com/secureauthx/server/auth/service/RegistrationServiceTests.java`: 2 tests (email normalization, duplicate rejection)
 - `src/test/java/com/secureauthx/server/sessions/service/SessionServiceTests.java`: 5 tests (create, list, revoke by id, revoke all, ownership check)
 - `src/test/java/com/secureauthx/server/sessions/service/UserAgentParserTests.java`: 5 tests (Chrome/Windows, Firefox/macOS, Safari/iOS, Edge/Android, null, empty)
 - `src/test/java/com/secureauthx/server/sessions/controller/SessionControllerIntegrationTests.java`: 7 tests (login creates session, list, current, revoke by id, revoke current, revoke all, multiple logins, not found, forbidden)
+- `src/test/java/com/secureauthx/server/authorization/service/RoleServiceTests.java`: 2 tests (returns all roles, returns empty list)
+- `src/test/java/com/secureauthx/server/authorization/service/PermissionServiceTests.java`: 2 tests (returns all permissions, returns empty list)
+- `src/test/java/com/secureauthx/server/authorization/service/UserAuthorityServiceTests.java`: 2 tests (loads role and permission authorities, returns empty for user with no roles)
+- `src/test/java/com/secureauthx/server/authorization/controller/AuthorizationControllerIntegrationTests.java`: 5 tests (user can list roles, user can list permissions, unauthenticated returns forbidden for roles and permissions, response does not expose internal mappings)
 - `src/test/java/com/secureauthx/server/config/OpenApiConfigTests.java`: 1 test (OpenAPI documentation)
 - `src/test/java/com/secureauthx/server/ServerApplicationTests.java`: 1 test (context loads)
 
@@ -232,6 +252,10 @@ Access Token Claims
 
 `sub` (user id UUID), `email`, `sessionId` (UUID of the current session)
 
+Authorization Strategy
+
+Permission-based RBAC with roles and fine-grained permissions. Roles are stored with `ROLE_` prefix for `hasRole()` support. Permissions are stored as-is for `hasAuthority()` support. Authorities are loaded from the database on every request via `UserAuthorityService`.
+
 Refresh Token Expiration
 
 7 days (configurable via `SECUREAUTHX_JWT_REFRESH_TOKEN_EXPIRATION_DAYS`)
@@ -274,15 +298,15 @@ ACTIVE
 
 Architecture
 
-UPDATED FOR SPRINT 03
+UPDATED FOR SPRINT 04
 
 Database
 
-UPDATED FOR SPRINT 03
+UPDATED FOR SPRINT 04
 
 API
 
-UPDATED FOR SPRINT 03
+UPDATED FOR SPRINT 04
 
 ---
 

@@ -10,6 +10,7 @@ Feature modules live under `com.secureauthx.server` using feature-first package 
 
 - `auth`: registration, login, token refresh, and logout. Contains controller, service, repository, entities, DTOs, mapper, validation, JWT service, and auth-specific exceptions.
 - `sessions`: session and device management. Contains controller, service, repository, entity, DTOs, UserAgentParser, and session-specific exceptions.
+- `authorization`: role-based access control. Contains controller, service, repository, entities, DTOs, and authority loading.
 - `common`: shared API error response and global exception handling.
 - `config`: security, JWT authentication filter, and OpenAPI configuration.
 
@@ -59,7 +60,22 @@ Sprint 03 session endpoints require a valid Bearer JWT access token:
 - `DELETE /api/v1/sessions/current`
 - `DELETE /api/v1/sessions/all`
 
+Sprint 04 RBAC endpoints require a valid Bearer JWT access token:
+
+- `GET /api/v1/roles`
+- `GET /api/v1/permissions`
+
 All other routes are denied by default until authorization flows are implemented in later sprints.
+
+## Authorization Model
+
+Access control is role-based with permission-level granularity. The model uses four tables: `roles`, `permissions`, `user_roles`, and `role_permissions`.
+
+On every authenticated request, the `JwtAuthenticationFilter` loads the user's roles and permissions from the database and attaches them as `GrantedAuthority` objects to the Spring Security context. Roles are prefixed with `ROLE_` (e.g., `ROLE_USER`), enabling `hasRole('USER')` checks. Permissions are used as-is (e.g., `SESSION_READ`), enabling `hasAuthority('SESSION_READ')` checks.
+
+Method-level security is enabled via `@EnableMethodSecurity`. Controllers use `@PreAuthorize` annotations for declarative access control.
+
+Every newly registered user automatically receives `ROLE_USER`. No administrator is automatically created.
 
 ## Authentication Flow
 

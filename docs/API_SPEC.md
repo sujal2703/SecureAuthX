@@ -2,7 +2,7 @@
 
 ## Current API Stage
 
-Sprint 03 adds user session and device management. OAuth, OIDC, passkeys, and RBAC remain out of scope.
+Sprint 04 adds role-based access control. OAuth, OIDC, and passkeys remain out of scope.
 
 ## Public Foundation Endpoints
 
@@ -260,6 +260,72 @@ Success response: `204 No Content`
 Error responses:
 
 - `401 Unauthorized` when the access token is missing, expired, or invalid.
+
+## RBAC Endpoints
+
+All RBAC endpoints require a valid Bearer JWT access token in the `Authorization` header.
+
+### `GET /api/v1/roles`
+
+Lists all available roles. Only exposes role id, name, and description. Internal mappings are not exposed.
+
+Success response: `200 OK`
+
+```json
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "USER",
+    "description": "Standard user with basic permissions"
+  },
+  {
+    "id": "660e8400-e29b-41d4-a716-446655440001",
+    "name": "ADMIN",
+    "description": "Administrator with elevated permissions"
+  }
+]
+```
+
+Error responses:
+
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+
+### `GET /api/v1/permissions`
+
+Lists all available permissions. Only exposes permission id, name, and description.
+
+Success response: `200 OK`
+
+```json
+[
+  {
+    "id": "770e8400-e29b-41d4-a716-446655440002",
+    "name": "USER_READ",
+    "description": "View user details"
+  },
+  {
+    "id": "880e8400-e29b-41d4-a716-446655440003",
+    "name": "USER_WRITE",
+    "description": "Create or update users"
+  }
+]
+```
+
+Error responses:
+
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+
+## Authorization
+
+Authentication is performed via RS256 JWT access tokens. After JWT validation, the user's roles and permissions are loaded from the database and attached to the security context. This enables both `hasRole()` and `hasAuthority()` checks.
+
+Default role for new users: `ROLE_USER`
+
+Default permissions for `ROLE_USER`: `SESSION_READ`, `SESSION_REVOKE`, `ROLE_READ`
+
+Default permissions for `ROLE_ADMIN`: all permissions
+
+Administrator accounts are not automatically created.
 
 ## Versioning
 

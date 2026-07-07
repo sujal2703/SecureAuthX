@@ -2,7 +2,7 @@
 
 ## Current Stage
 
-Sprint 01 includes user registration only.
+Sprint 04 includes role-based access control.
 
 ## Developer Foundation Flow
 
@@ -20,8 +20,16 @@ Sprint 01 includes user registration only.
 4. Backend rejects duplicate emails with `409 Conflict`.
 5. Backend hashes the password with Argon2id.
 6. Backend stores the user record.
-7. Backend returns `201 Created` with user id, normalized email, and creation timestamp.
+7. Backend assigns `ROLE_USER` to the new user.
+8. Backend returns `201 Created` with user id, normalized email, and creation timestamp.
+
+## Role and Permission Listing Flow
+
+1. Client authenticates via login to obtain a JWT access token.
+2. Client uses the Bearer JWT to call `GET /api/v1/roles` or `GET /api/v1/permissions`.
+3. Backend validates the JWT, loads user authorities, and returns the requested data.
+4. Responses contain only safe information (id, name, description) — no internal mappings.
 
 ## Future Flows
 
-Login, logout, password reset, email verification, sessions, RBAC, organizations, OAuth, OpenID Connect, and passkeys are future sprint work and must not be implemented during Sprint 01.
+Password reset, email verification, organizations, OAuth, OpenID Connect, passkeys, role assignment endpoints, and developer portal are future sprint work.

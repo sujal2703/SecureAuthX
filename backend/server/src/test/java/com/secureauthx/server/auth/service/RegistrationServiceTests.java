@@ -11,6 +11,11 @@ import com.secureauthx.server.auth.entity.User;
 import com.secureauthx.server.auth.exception.DuplicateEmailException;
 import com.secureauthx.server.auth.mapper.UserMapper;
 import com.secureauthx.server.auth.repository.UserRepository;
+import com.secureauthx.server.authorization.entity.Role;
+import com.secureauthx.server.authorization.entity.UserRole;
+import com.secureauthx.server.authorization.repository.RoleRepository;
+import com.secureauthx.server.authorization.repository.UserRoleRepository;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -31,6 +36,12 @@ class RegistrationServiceTests {
     @Mock
     private UserMapper userMapper;
 
+    @Mock
+    private RoleRepository roleRepository;
+
+    @Mock
+    private UserRoleRepository userRoleRepository;
+
     @InjectMocks
     private RegistrationService registrationService;
 
@@ -40,6 +51,8 @@ class RegistrationServiceTests {
         when(userRepository.existsByEmail("developer@example.com")).thenReturn(false);
         when(passwordEncoder.encode("S3cureExample!2026")).thenReturn("$argon2id$hash");
         when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(roleRepository.findByName("USER")).thenReturn(Optional.of(new Role("USER", "Standard user")));
+        when(userRoleRepository.save(any(UserRole.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         registrationService.register(request);
 
@@ -49,6 +62,7 @@ class RegistrationServiceTests {
         User savedUser = userCaptor.getValue();
         org.assertj.core.api.Assertions.assertThat(savedUser.getEmail()).isEqualTo("developer@example.com");
         org.assertj.core.api.Assertions.assertThat(savedUser.getPasswordHash()).isEqualTo("$argon2id$hash");
+        verify(userRoleRepository).save(any(UserRole.class));
     }
 
     @Test
@@ -61,5 +75,6 @@ class RegistrationServiceTests {
 
         verify(passwordEncoder, never()).encode(any());
         verify(userRepository, never()).save(any());
+        verify(userRoleRepository, never()).save(any());
     }
 }
