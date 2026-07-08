@@ -1,142 +1,139 @@
-﻿# Sprint 11 - Admin Portal
+﻿# Sprint 12 — Production Readiness (Release Candidate)
 
 Status: COMPLETED on 2026-07-08
 
 ## Objective
 
-Implement an Admin Portal API that allows administrators to view a platform dashboard, browse audit logs, manage system announcements, configure system settings, and track/resolve security incidents.
+Prepare SecureAuthX for production deployment. Focus on stability, security, performance, observability, deployment, and CI/CD.
 
-## Requirements
+## Scope Implemented
 
-### Database
-- Create V11 Flyway migration with four tables: `audit_logs`, `system_announcements`, `system_settings`, `security_incidents`.
-- `audit_logs` columns: id (UUID PK), user_id (FK to users ON DELETE SET NULL), user_email, action (VARCHAR 100), details (TEXT), ip_address, created_at.
-- `system_announcements` columns: id (UUID PK), title (VARCHAR 255), content (TEXT), severity (VARCHAR 20, default INFO), active (boolean, default true), created_by (FK to users), expires_at, created_at, updated_at.
-- `system_settings` columns: id (UUID PK), key (VARCHAR 255 UNIQUE), value (TEXT), description (VARCHAR 500), created_at, updated_at.
-- `security_incidents` columns: id (UUID PK), user_id (FK to users), user_email, incident_type (VARCHAR 100), severity (VARCHAR 20), details, ip_address, resolved (boolean), resolved_at, resolved_by (FK), resolution, created_at.
-- Indexes on audit_logs (user_id, action, created_at), security_incidents (user_id), system_settings (key).
-- Seed data: 4 default system settings (maintenance_mode, max_login_attempts, session_timeout_minutes, maintenance_message).
+### 1. Production Profiles
+- `application.yml` — base config with `spring.profiles.active: ${SECUREAUTHX_PROFILE:local}`
+- `application-dev.yml` — development with debug logging and detailed health
+- `application-test.yml` — H2 in-memory, Redis disabled (pre-existing, updated)
+- `application-prod.yml` — production tuning: HikariCP, Tomcat threads, connection timeouts, Prometheus metrics, percentile config, batch JDBC operations
+- `ProductionConfig.java` — `@Profile("prod")` startup validation of required env vars (DB password, Redis password, JWT keys). Fails fast with meaningful messages.
 
-### Domain Model
-- Entities: `AuditLog`, `SystemAnnouncement`, `SystemSetting`, `SecurityIncident`.
-- Repositories with pagination support (`Pageable`), filtering (findByUserId, findByAction, findByResolved, findByActiveTrue, findByExpiresAtAfterOrExpiresAtIsNull).
-- DTOs: `AuditLogResponse`, `AnnouncementRequest`, `AnnouncementResponse`, `SystemSettingRequest`, `SystemSettingResponse`, `SecurityIncidentResponse`, `IncidentResolveRequest`, `DashboardResponse`.
-- Admin exception: `ResourceNotFoundException` (maps to 404), `IllegalArgumentException` (maps to 400).
+### 2. Observability
+- Added `micrometer-registry-prometheus` dependency
+- Prometheus endpoint exposed at `/actuator/prometheus`
+- Micrometer tags (`application=secureauthx`) on all metrics
+- Latency percentiles (SLO) and histogram configured for http.server.requests
+- Liveness and readiness probes enabled (pre-existing, verified working)
+- Build info endpoint (`/actuator/info`) reports artifact version
 
-### Services
-- **AuditService**: records audit entries with action, userId, email, details, ipAddress; retrieves entries with pagination and optional userId/action filtering.
-- **DashboardService**: aggregates total users, total/active sessions, total developer projects, pending incidents, recent registrations/logins, recent audit actions from existing repositories.
-- **AnnouncementService**: CRUD for announcements with active/expired filtering, created_by tracking.
-- **SystemSettingsService**: list/get/update with key-based lookups, seed data fallback.
-- **IncidentService**: list with pagination and optional resolved filter, get by id, resolve with admin tracking, create for automated incident recording.
+### 3. Structured Logging
+- `CorrelationFilter` generates unique request ID (`X-Request-ID`) for every request
+- Request ID set as MDC value (`requestId`) and returned as response header
+- Execution time measured and returned as `X-Execution-Time-Ms` response header
+- `JwtAuthenticationFilter` updated to set `userId` and `sessionId` in MDC when JWT is validated
+- Logback pattern updated to include `requestId`, `userId`, `sessionId` in every log line
 
-### API
-- `GET /api/v1/admin/dashboard` — platform dashboard aggregate.
-- `GET /api/v1/admin/audit` — list audit logs (pageable, userId, action filters).
-- `GET /api/v1/admin/audit/{id}` — get single audit entry.
-- `POST /api/v1/admin/announcements` — create announcement.
-- `GET /api/v1/admin/announcements` — list announcements (optional active filter).
-- `GET /api/v1/admin/announcements/{id}` — get single announcement.
-- `PUT /api/v1/admin/announcements/{id}` — update announcement.
-- `DELETE /api/v1/admin/announcements/{id}` — delete announcement.
-- `GET /api/v1/admin/settings` — list all settings.
-- `GET /api/v1/admin/settings/{key}` — get setting by key.
-- `PUT /api/v1/admin/settings/{key}` — update setting value.
-- `GET /api/v1/admin/incidents` — list incidents (pageable, resolved filter).
-- `GET /api/v1/admin/incidents/{id}` — get single incident.
-- `PUT /api/v1/admin/incidents/{id}/resolve` — resolve incident.
+### 4. Security Hardening
+- `SecurityHeadersConfig` adds per-response headers:
+  - `Strict-Transport-Security: max-age=31536000; includeSubDomains`
+  - `X-Content-Type-Options: nosniff`
+  - `X-Frame-Options: DENY`
+  - `Referrer-Policy: strict-origin-when-cross-origin`
+  - `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+  - `Cache-Control: no-store, max-age=0`
+  - `Content-Security-Policy: default-src 'none'; ... frame-ancestors 'none'; form-action 'self'`
+- `CorsConfig.java` — whitelist-based CORS via `SECUREAUTHX_CORS_ALLOWED_ORIGINS` env var
+- SecurityConfig updated with `.cors(cors -> {})` to enable Spring CORS processing
 
-### Authorization
-- All admin endpoints require `ROLE_ADMIN` via `@PreAuthorize("hasRole('ADMIN')")` and `SecurityConfig.requestMatchers("/api/v1/admin/**").hasRole("ADMIN")`.
-- Non-admin users receive `403 Forbidden`.
+### 5. Runtime Rate Limiting
+- `RateLimitingService` — Redis-backed sliding window counter per user/IP/endpoint
+- `RateLimitingFilter` — applies rate limits to `/api/v1/auth/login` (10/min), `/api/v1/auth/register` (10/min), `/api/v1/auth/refresh` (20/min)
+- Returns HTTP 429 with JSON error body when exceeded
+- `RateLimitConfig` — `@ConditionalOnProperty("secureauthx.rate-limiting.enabled")`, only active when explicitly enabled
+- Configurable via `SECUREAUTHX_RATE_LIMITING_ENABLED`, `SECUREAUTHX_RATE_LIMIT_DEFAULT_RPM`, `SECUREAUTHX_RATE_LIMIT_DEFAULT_RPH`
 
-### Audit Wiring
-- Audit events automatically recorded in: `AuthenticationService` (login success, login failed, logout, refresh), `RegistrationService` (registration), `WebAuthnRegistrationService` (passkey registration), `OAuthClientService` (OAuth client created), `SecretRotationService` (secret rotated), `AdminController` (settings update, announcement CRUD, incident resolve).
-- `AuditService` injected via `@Autowired(required = false)` to avoid breaking existing tests.
-- `IncidentService` injected into `AuthenticationService` to record failed login attempts as security incidents.
+### 6. Docker Improvements
+- Healthcheck updated to use `/actuator/health/liveness` with `--start-period=60s`
+- Production JVM options via `JAVA_OPTS` env: ZGC, MaxRAMPercentage=75%, ExitOnOutOfMemoryError, HeapDumpOnOOM
+- Runtime image remains `eclipse-temurin:21-jre-jammy` with non-root user
+- Multi-stage build preserved
 
-### Exception Handling
-- `ResourceNotFoundException` → 404 Not Found with `ApiErrorResponse`.
-- `IllegalArgumentException` → 400 Bad Request.
-- Handlers registered in `GlobalExceptionHandler`.
+### 7. GitHub Actions CI
+- Created `.github/workflows/ci.yml`
+- On push to main/develop and PR to main:
+  - Build with Gradle
+  - Run all 209 tests
+  - Verify Docker build
+  - Archive test reports on failure
+- Uses PostgreSQL and Redis service containers
+
+### 8. Performance
+- HikariCP pool: max-lifetime (30min), leak-detection-threshold (60s) configured
+- Tomcat: max-threads (200), min-spare (10), connection-timeout (5s), max-connections (10000), accept-count (100)
+- Redis connection pooling (lettuce): max-active (16), max-idle (8), min-idle (2)
+- Hibernate batch operations: batch_size (25), order_inserts/updates enabled
+- Compression: mime-types extended, min-response-size (2KB)
+
+### 9. Documentation
+- `README.md` — created with project overview, features, architecture, tech stack, quick start, API overview, profiles, env vars, roadmap, license
+- `docs/DEPLOYMENT.md` — created with local/prod deployment, JWT key generation, scaling, health checks, monitoring, security
+- `docs/PRODUCTION.md` — created with pre/post-deployment checklists, architecture diagram, troubleshooting
+- `IMPLEMENTATION_PLAN.md` — updated top section
+- `.ai/12_CURRENT_SPRINT.md` — updated
+- `.ai/13_PROJECT_MEMORY.md` — updated
+- `.env.example` — updated with all new variables
 
 ## Architecture Decisions
 
-### Audit as Passive Service
-- `AuditService` uses `@Autowired(required = false)` so existing services and tests without audit beans continue to work unchanged.
-- Audit recording is fire-and-forget: failures to write an audit entry do not affect the primary operation.
+### Rate Limiting as Conditional Feature
+- Redis-backed rate limiting is disabled by default to avoid breaking existing tests
+- Enabled via `SECUREAUTHX_RATE_LIMITING_ENABLED=true`
+- `RateLimitConfig` uses `@ConditionalOnProperty` so the beans are only created when enabled
+- `SecurityConfig` uses `ObjectProvider<RateLimitingFilter>` for optional injection
 
-### Incident Auto-Creation
-- Security incidents are automatically created for failed login attempts in `AuthenticationService.login()`.
-- This provides out-of-the-box value for security monitoring without manual incident creation.
+### Correlation Filter at Highest Precedence
+- `CorrelationFilter` runs before the security filter chain to ensure MDC values are available for all downstream logging
+- Request ID is generated server-side if not provided by the client
 
-### Dashboard as Composite Service
-- `DashboardService` aggregates data across existing repositories (`UserRepository`, `SessionRepository`, `DeveloperProjectRepository`, `SecurityIncidentRepository`, `AuditLogRepository`) rather than maintaining separate aggregated tables.
-- Dashboard data is computed on every request rather than cached. Acceptable for current scale.
+### Production Profile Validates at Startup
+- `ProductionConfig` checks required env vars on `@PostConstruct`
+- Application fails fast with descriptive message if any are missing
+- Prevents deployment with default/incomplete configuration
 
-### H2 Test Compatibility
-- Test profile uses `create-drop` DDL and does not execute Flyway migrations.
-- Seed data (system_settings) is inserted in `@BeforeEach` for integration tests.
-- Test entities use the same JPA annotations as production without profile-specific configuration.
+## Files Created
+- `backend/server/src/main/resources/application-dev.yml`
+- `backend/server/src/main/resources/application-prod.yml`
+- `backend/server/src/main/java/com/secureauthx/server/config/ProductionConfig.java`
+- `backend/server/src/main/java/com/secureauthx/server/config/CorsConfig.java`
+- `backend/server/src/main/java/com/secureauthx/server/config/SecurityHeadersConfig.java`
+- `backend/server/src/main/java/com/secureauthx/server/config/CorrelationFilter.java`
+- `backend/server/src/main/java/com/secureauthx/server/config/RateLimitingService.java`
+- `backend/server/src/main/java/com/secureauthx/server/config/RateLimitingFilter.java`
+- `backend/server/src/main/java/com/secureauthx/server/config/RateLimitConfig.java`
+- `.github/workflows/ci.yml`
+- `README.md`
+- `docs/DEPLOYMENT.md`
+- `docs/PRODUCTION.md`
 
-## Files Changed
-
-### New Files
-- `resources/db/migration/V11__Create_admin_portal_tables.sql`
-- `admin/entity/AuditLog.java`
-- `admin/entity/SystemAnnouncement.java`
-- `admin/entity/SystemSetting.java`
-- `admin/entity/SecurityIncident.java`
-- `admin/repository/AuditLogRepository.java`
-- `admin/repository/SystemAnnouncementRepository.java`
-- `admin/repository/SystemSettingRepository.java`
-- `admin/repository/SecurityIncidentRepository.java`
-- `admin/dto/AuditLogResponse.java`
-- `admin/dto/AnnouncementRequest.java`
-- `admin/dto/AnnouncementResponse.java`
-- `admin/dto/SystemSettingRequest.java`
-- `admin/dto/SystemSettingResponse.java`
-- `admin/dto/SecurityIncidentResponse.java`
-- `admin/dto/IncidentResolveRequest.java`
-- `admin/dto/DashboardResponse.java`
-- `admin/service/AuditService.java`
-- `admin/service/DashboardService.java`
-- `admin/service/AnnouncementService.java`
-- `admin/service/SystemSettingsService.java`
-- `admin/service/IncidentService.java`
-- `admin/controller/AdminController.java`
-- `admin/exception/ResourceNotFoundException.java`
-- `admin/service/AuditServiceTests.java`
-- `admin/service/DashboardServiceTests.java`
-- `admin/service/SystemSettingsServiceTests.java`
-- `admin/service/IncidentServiceTests.java`
-- `admin/service/AnnouncementServiceTests.java`
-- `admin/controller/AdminControllerIntegrationTests.java`
-
-### Modified Files
-- `auth/service/AuthenticationService.java`: added AuditService + IncidentService injection
-- `auth/service/RegistrationService.java`: added AuditService injection
-- `passkey/service/WebAuthnRegistrationService.java`: added AuditService injection
-- `oauth/service/OAuthClientService.java`: added AuditService injection, added setHashedClientSecret()
-- `developer/service/SecretRotationService.java`: added AuditService injection
-- `sessions/repository/SessionRepository.java`: added countByRevokedAtIsNull()
-- `config/SecurityConfig.java`: added /api/v1/admin/** hasRole("ADMIN")
-- `common/exception/GlobalExceptionHandler.java`: added ResourceNotFoundException + IllegalArgumentException handlers
-
-## Test Coverage
-
-- `AuditServiceTests`: 4 tests (record audit entry, list audit logs, list audit logs with userId filter, get by ID not found)
-- `DashboardServiceTests`: 1 test (returns correct aggregated metrics)
-- `SystemSettingsServiceTests`: 5 tests (list settings, get setting by key, get setting not found, update setting, update setting not found)
-- `IncidentServiceTests`: 4 tests (list all incidents, list unresolved incidents, get by ID, resolve incident, not found)
-- `AnnouncementServiceTests`: 7 tests (create, list all, list active only, get by ID, update, delete, not found)
-- `AdminControllerIntegrationTests`: 10 integration tests (dashboard, audit list, audit by ID, audit not found, announcements CRUD, settings get/update, incidents list/resolve)
+## Files Modified
+- `build.gradle.kts` — added micrometer-registry-prometheus
+- `application.yml` — added profiles, prometheus, rate-limiting, cors config sections
+- `application-test.yml` — unchanged (pre-existing)
+- `logback-spring.xml` — updated pattern with requestId, userId, sessionId
+- `Dockerfile` — updated HEALTHCHECK, JAVA_OPTS
+- `.env.example` — added all new variables
+- `docker-compose.yml` — unchanged
+- `SecurityConfig.java` — added CORS, rate limiting filter, actuator endpoints
+- `JwtAuthenticationFilter.java` — added MDC population
+- `.ai/12_CURRENT_SPRINT.md` — updated
+- `.ai/13_PROJECT_MEMORY.md` — updated
 
 ## Verification
-
-- `./gradlew.bat build` succeeds with 209 tests passing (147 pre-existing + 36 developer portal + 26 admin portal).
-- All admin endpoints require `ROLE_ADMIN`; non-admin requests return `403 Forbidden`.
-- Audit entries are recorded for login, logout, registration, passkey registration, OAuth client creation, and secret rotation.
-- Security incidents are auto-created for failed login attempts.
-- Dashboard returns correct aggregate metrics.
-- System settings are seeded with 4 defaults and can be read/updated.
+- `./gradlew.bat build` succeeds (209 tests passing)
+- `docker build -t secureauthx-server .` succeeds
+- `docker compose up -d` starts all 3 services (postgres, redis, backend)
+- `/actuator/health` returns `{"status":"UP","groups":["liveness","readiness"]}`
+- `/actuator/health/liveness` returns `{"status":"UP"}`
+- `/actuator/health/readiness` returns `{"status":"UP"}`
+- `/actuator/info` returns build artifact info
+- MDC values (requestId, userId, sessionId) appear in log output
+- Security headers present in all responses
+- CORS filter active with whitelist-based origins
+- Rate limiting ready when enabled via environment variable

@@ -4,16 +4,14 @@ spring:
   autoconfigure:
     exclude:
       - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+  profiles:
+    active: ${SECUREAUTHX_PROFILE:local}
   datasource:
     url: jdbc:postgresql://${SECUREAUTHX_POSTGRES_HOST:localhost}:${SECUREAUTHX_POSTGRES_PORT:5432}/${SECUREAUTHX_POSTGRES_DB:secureauthx}
     username: ${SECUREAUTHX_POSTGRES_USER:secureauthx}
     password: ${SECUREAUTHX_POSTGRES_PASSWORD}
     hikari:
       pool-name: SecureAuthXHikariPool
-      maximum-pool-size: ${SECUREAUTHX_DB_MAX_POOL_SIZE:10}
-      minimum-idle: ${SECUREAUTHX_DB_MIN_IDLE:2}
-      connection-timeout: ${SECUREAUTHX_DB_CONNECTION_TIMEOUT_MS:30000}
-      validation-timeout: ${SECUREAUTHX_DB_VALIDATION_TIMEOUT_MS:5000}
   data:
     redis:
       host: ${SECUREAUTHX_REDIS_HOST:localhost}
@@ -43,7 +41,7 @@ management:
     web:
       base-path: /actuator
       exposure:
-        include: health,info,metrics
+        include: health,info,metrics,prometheus
   endpoint:
     health:
       probes:
@@ -54,6 +52,9 @@ management:
       enabled: true
     redis:
       enabled: true
+  metrics:
+    tags:
+      application: secureauthx
 
 springdoc:
   api-docs:
@@ -69,6 +70,12 @@ secureauthx:
     refresh-token-expiration-days: ${SECUREAUTHX_JWT_REFRESH_TOKEN_EXPIRATION_DAYS:7}
   oidc:
     issuer: ${SECUREAUTHX_OIDC_ISSUER:http://localhost:8080}
+  rate-limiting:
+    enabled: ${SECUREAUTHX_RATE_LIMITING_ENABLED:false}
+    default-requests-per-minute: ${SECUREAUTHX_RATE_LIMIT_DEFAULT_RPM:60}
+    default-requests-per-hour: ${SECUREAUTHX_RATE_LIMIT_DEFAULT_RPH:1000}
+  cors:
+    allowed-origins: ${SECUREAUTHX_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:8080}
 
 logging:
   level:

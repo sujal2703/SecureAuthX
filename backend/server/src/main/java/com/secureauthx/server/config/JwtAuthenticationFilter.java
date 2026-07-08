@@ -12,6 +12,7 @@ import java.util.Collection;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -47,6 +48,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(userId, sessionId, authorities);
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+                MDC.put("userId", userId.toString());
+                if (sessionId != null) {
+                    MDC.put("sessionId", sessionId.toString());
+                }
             } catch (Exception e) {
                 LOGGER.debug("JWT authentication failed: {}", e.getMessage());
                 SecurityContextHolder.clearContext();

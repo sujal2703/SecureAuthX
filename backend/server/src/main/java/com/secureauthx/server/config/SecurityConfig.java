@@ -1,5 +1,6 @@
 package com.secureauthx.server.config;
 
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -17,21 +18,27 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final RateLimitingFilter rateLimitingFilter;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
+                          ObjectProvider<RateLimitingFilter> rateLimitingFilterProvider) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.rateLimitingFilter = rateLimitingFilterProvider.getIfAvailable();
     }
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        return http
+        var builder = http
                 .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> {})
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(
                                 "/actuator/health",
                                 "/actuator/health/**",
                                 "/actuator/info",
+                                "/actuator/metrics",
+                                "/actuator/prometheus",
                                 "/v3/api-docs",
                                 "/v3/api-docs/**",
                                 "/swagger-ui",
@@ -53,8 +60,13 @@ public class SecurityConfig {
                         .anyRequest().denyAll())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .httpBasic(AbstractHttpConfigurer::disable)
-                .formLogin(AbstractHttpConfigurer::disable)
-                .build();
+                .formLogin(AbstractHttpConfigurer::disable);
+
+        if (rateLimitingFilter != null) {
+            builder.addFilterBefore(rateLimitingFilter, JwtAuthenticationFilter.class);
+        }
+
+        return builder.build();
     }
 
     @Bean

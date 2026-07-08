@@ -22,13 +22,13 @@ Append new information where appropriate.
 
 # Current Phase
 
-Admin Portal
+Production Readiness (Release Candidate)
 
 ---
 
 # Current Sprint
 
-Sprint 11
+Sprint 12
 
 ---
 
@@ -156,7 +156,7 @@ Sprint 06 verification completed:
 
 # Work In Progress
 
-No active sprint implementation is in progress. Sprint 11 completed. Awaiting review before Sprint 12.
+No active sprint implementation is in progress. Sprint 12 completed. Release candidate ready for production deployment.
 
 ---
 
@@ -210,6 +210,24 @@ Sprint 11 verification completed:
 - System settings are seeded and manageable.
 - `docker compose --env-file .env.example up --build -d` starts the stack (pending verification).
 
+Sprint 12 completed on 2026-07-08.
+
+Sprint 12 (Production Readiness) delivered: 3 Spring profiles (dev, prod configure) with startup validation, Micrometer Prometheus metrics, CorrelationFilter with request ID + execution time + MDC logging, security headers (CSP, HSTS, X-Frame-Options, etc.), CORS configuration with whitelist-based origins, Redis-backed rate limiting for auth endpoints (HTTP 429), Dockerfile JVM options (ZGC, OOM handling, healthcheck), GitHub Actions CI workflow, Tomcat/HikariCP/Hibernate performance tuning, and full production documentation (README, DEPLOYMENT, PRODUCTION checklists).
+
+Sprint 12 verification completed:
+- `./gradlew.bat build` succeeds (209 total tests: same 209, no regressions).
+- `docker build -t secureauthx-server .` succeeds.
+- `docker compose --env-file .env.example up -d` starts all 3 services (postgres, redis, backend).
+- `/actuator/health` returns `{"status":"UP","groups":["liveness","readiness"]}`.
+- `/actuator/health/liveness` and `/actuator/health/readiness` return `{"status":"UP"}`.
+- `/actuator/info` returns build artifact version.
+- MDC values (requestId, userId, sessionId) appear in log output.
+- Security headers present in all HTTP responses.
+- CORS configured with whitelist-based origins.
+- Rate limiting infrastructure ready (disabled by default).
+- JVM configured with ZGC, MaxRAMPercentage=75%, ExitOnOutOfMemoryError.
+- Production configuration validates required env vars at startup.
+
 ---
 
 # Pending Work
@@ -252,7 +270,7 @@ Admin Portal (COMPLETED)
 
 Sprint 12
 
-Production Deployment
+Production Readiness (COMPLETED)
 
 ---
 
@@ -400,15 +418,15 @@ ACTIVE
 
 Architecture
 
-UPDATED FOR SPRINT 11
+UPDATED FOR SPRINT 12
 
 Database
 
-UPDATED FOR SPRINT 11
+UPDATED FOR SPRINT 12
 
 API
 
-UPDATED FOR SPRINT 11
+UPDATED FOR SPRINT 12
 
 ---
 

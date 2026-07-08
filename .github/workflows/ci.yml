@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: secureauthx
+          POSTGRES_USER: secureauthx
+          POSTGRES_PASSWORD: test-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: backend/server
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: temurin
+          cache: gradle
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build and run tests
+        run: ./gradlew.bat build --no-daemon
+        env:
+          SECUREAUTHX_POSTGRES_HOST: localhost
+          SECUREAUTHX_POSTGRES_PORT: 5432
+          SECUREAUTHX_POSTGRES_DB: secureauthx
+          SECUREAUTHX_POSTGRES_USER: secureauthx
+          SECUREAUTHX_POSTGRES_PASSWORD: test-password
+          SECUREAUTHX_REDIS_HOST: localhost
+          SECUREAUTHX_REDIS_PORT: 6379
+          SECUREAUTHX_REDIS_PASSWORD: test-redis-password
+
+      - name: Verify Docker build
+        run: docker build -t secureauthx-server .
+
+      - name: Archive test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: backend/server/build/reports/

@@ -17,4 +17,9 @@ COPY --from=build /workspace/build/libs/*.jar /app/secureauthx-server.jar
 USER secureauthx
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "/app/secureauthx-server.jar"]
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 --start-period=60s \
+    CMD wget -qO- http://localhost:8080/actuator/health/liveness | grep -q '"status":"UP"' || exit 1
+
+ENV JAVA_OPTS="-XX:+UseZGC -XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError -XX:+HeapDumpOnOutOfMemoryError -Djava.security.egd=file:/dev/./urandom"
+
+ENTRYPOINT ["sh", "-c", "java ${JAVA_OPTS} -jar /app/secureauthx-server.jar"]
