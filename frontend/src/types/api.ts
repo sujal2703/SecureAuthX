@@ -38,3 +38,33 @@ export interface UserInfoResponse {
   given_name?: string;
   family_name?: string;
 }
+
+export interface OAuthClient {
+  id: string;
+  clientId: string;
+  clientName: string;
+  confidential: boolean;
+  enabled: boolean;
+  redirectUris: string[];
+  createdAt: string;
+}
+
+export interface OAuthClientCreateRequest {
+  clientId: string;
+  clientSecret?: string;
+  clientName: string;
+  confidential: boolean;
+  redirectUris: string[];
+}
+
+export interface OAuthClientCreateResponse extends OAuthClient {
+  clientSecret: string;
+}
+
+export interface OrganizationCreateRequest {
+  name: string;
+}
+
+export interface OrganizationUpdateRequest {
+  name: string;
+}

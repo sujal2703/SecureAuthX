@@ -152,3 +152,26 @@ Only the tasks in `.ai/12_CURRENT_SPRINT.md` are in scope.
 - 4 existing frontend tests updated with profile service mock
 - Backend unchanged (uses existing APIs only)
 - `npm run build`, `npm run lint`, `npm test` — all pass
+
+### Sprint F3 — Frontend Organizations (2026-07-08)
+
+- Organizations list page with inline create and inline edit
+- Loading skeleton, empty state, error state, toast notifications
+- Personal org badge display
+- `OrganizationCreateRequest` and `OrganizationUpdateRequest` types
+- Organization service: list, get, create, update methods
+
+### Sprint F4 — Frontend OAuth Client Management (2026-07-08)
+
+- OAuth clients list page with search, type filter, status filter
+- Admin access gate (403 response shows "Admin access required" message)
+- Client detail page with client info, redirect URIs, copy client ID
+- New client creation form with redirect URI management
+- Client secret reveal/copy after creation (shown once)
+- OAuth client types and create request/response types
+- OAuth client service: list, get, create methods
+- Updated sidebar with Organizations (Building2) and OAuth Clients (Key) nav items
+- Updated header with page titles for all new routes
+- 14 new frontend tests (organizations: 6, oauth-clients: 8)
+- All 52 frontend tests pass
+- Backend unchanged (uses existing APIs only)

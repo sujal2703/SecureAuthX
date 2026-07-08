@@ -11,6 +11,8 @@ import {
   Settings,
   LogOut,
   ShieldCheck,
+  Building2,
+  Key,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
@@ -20,6 +22,8 @@ const navItems = [
   { href: "/dashboard/profile", label: "Profile", icon: User },
   { href: "/dashboard/sessions", label: "Sessions", icon: Monitor },
   { href: "/dashboard/devices", label: "Devices", icon: Smartphone },
+  { href: "/dashboard/organizations", label: "Organizations", icon: Building2 },
+  { href: "/dashboard/oauth-clients", label: "OAuth Clients", icon: Key },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 

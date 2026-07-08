@@ -12,13 +12,16 @@ const pageTitles: Record<string, string> = {
   "/dashboard/profile": "Profile",
   "/dashboard/sessions": "Sessions",
   "/dashboard/devices": "Devices",
+  "/dashboard/organizations": "Organizations",
+  "/dashboard/oauth-clients": "OAuth Clients",
+  "/dashboard/oauth-clients/new": "New OAuth Client",
   "/dashboard/settings": "Settings",
 };
 
 export function Header() {
   const pathname = usePathname();
   const { user } = useAuth();
-  const title = pageTitles[pathname] || "Dashboard";
+  const title = pageTitles[pathname] || pageTitles[pathname.replace(/\/[^/]+$/, "")] || "Dashboard";
 
   return (
     <header className="flex h-16 items-center justify-between border-b bg-card px-6">
