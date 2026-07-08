@@ -2,7 +2,7 @@
 
 ## Current API Stage
 
-Sprint 05 adds organizations and multi-tenancy foundation. OAuth, OIDC, and passkeys remain out of scope.
+Sprint 06 adds OAuth 2.1 Authorization Server support with Authorization Code Flow (PKCE S256 mandatory) and Client Credentials Flow. OIDC and passkeys remain out of scope.
 
 ## Public Foundation Endpoints
 
@@ -440,9 +440,232 @@ Error responses:
 - `403 Forbidden` when the user is not an `OWNER` or `ADMIN` of the organization.
 - `404 Not Found` when the organization does not exist or the user is not a member.
 
+## OAuth 2.1 Endpoints
+
+OAuth endpoints use form-urlencoded or JSON request bodies. Token responses follow OAuth 2.1 snake_case conventions (`access_token`, `token_type`, `expires_in`, `refresh_token`).
+
+### Client Management Endpoints
+
+All client management endpoints require `ROLE_ADMIN` and a valid Bearer JWT access token in the `Authorization` header.
+
+#### `POST /api/v1/oauth/clients`
+
+Registers a new OAuth 2.1 client.
+
+Request:
+
+```json
+{
+  "clientId": "my-client",
+  "clientName": "My Client",
+  "confidential": true,
+  "clientSecret": "my-secret-value",
+  "redirectUris": ["https://example.com/callback"]
+}
+```
+
+Validation:
+
+- `clientId` is required, must be unique.
+- `clientName` is required.
+- `confidential` defaults to `false`. If `true`, `clientSecret` is required.
+- `redirectUris` must contain at least one URI.
+- Client secrets are hashed with Argon2id. The raw secret is returned only in the create response.
+
+Success response: `201 Created`
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "clientId": "my-client",
+  "clientSecret": "my-secret-value",
+  "clientName": "My Client",
+  "confidential": true,
+  "enabled": true,
+  "redirectUris": ["https://example.com/callback"],
+  "createdAt": "2026-07-08T10:00:00Z"
+}
+```
+
+The `Location` header is set to the new client's resource URI.
+
+Error responses:
+
+- `400 Bad Request` for validation failures or duplicate `clientId`.
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+- `403 Forbidden` when the user does not have `ROLE_ADMIN`.
+
+#### `GET /api/v1/oauth/clients`
+
+Lists all registered OAuth 2.1 clients.
+
+Success response: `200 OK`
+
+```json
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "clientId": "my-client",
+    "clientName": "My Client",
+    "confidential": true,
+    "enabled": true,
+    "redirectUris": ["https://example.com/callback"],
+    "createdAt": "2026-07-08T10:00:00Z",
+    "updatedAt": "2026-07-08T10:00:00Z"
+  }
+]
+```
+
+Error responses:
+
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+- `403 Forbidden` when the user does not have `ROLE_ADMIN`.
+
+#### `GET /api/v1/oauth/clients/{id}`
+
+Returns a specific OAuth 2.1 client by UUID.
+
+Success response: `200 OK` (same schema as list item)
+
+Error responses:
+
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+- `403 Forbidden` when the user does not have `ROLE_ADMIN`.
+- `404 Not Found` when the client does not exist.
+
+### Authorization Endpoint
+
+#### `GET /oauth/authorize`
+
+Initiates an OAuth 2.1 Authorization Code Flow with PKCE. The user must be authenticated. On success, the browser is redirected to the registered `redirect_uri` with the authorization code and state.
+
+Query parameters:
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `client_id` | Yes | The registered OAuth client ID |
+| `redirect_uri` | Yes | Must exactly match a registered redirect URI |
+| `response_type` | Yes | Must be `code` |
+| `state` | Yes | Opaque value for CSRF protection, echoed back in redirect |
+| `code_challenge` | Yes | S256 PKCE challenge derived from the code verifier |
+| `code_challenge_method` | Yes | Must be `S256` |
+| `scope` | No | Requested scopes (currently not enforced) |
+
+Validation:
+
+- `response_type` must be `code`.
+- `code_challenge_method` must be `S256` (plain is not allowed).
+- `code_challenge` must be non-empty.
+- `client_id` must reference an existing, enabled client.
+- `redirect_uri` must exactly match a registered redirect URI for the client.
+
+Success response: `302 Found`
+
+The `Location` header contains the redirect URI with `code` and `state` query parameters:
+
+```
+https://example.com/callback?code=abc123...&state=test-state
+```
+
+Error responses:
+
+- `400 Bad Request` when client validation fails, redirect URI mismatches, or PKCE challenge is invalid.
+- `401 Unauthorized` when the user is not authenticated.
+- `403 Forbidden` when the user is not authenticated.
+
+### Token Endpoint
+
+#### `POST /oauth/token`
+
+Exchanges an authorization code for tokens (Authorization Code Flow) or issues tokens directly (Client Credentials Flow).
+
+Request body: `application/x-www-form-urlencoded`
+
+##### Authorization Code Grant
+
+Parameters:
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `grant_type` | Yes | Must be `authorization_code` |
+| `code` | Yes | The authorization code from the redirect |
+| `redirect_uri` | Yes | Must match the URI used in the authorize request |
+| `client_id` | Yes | The registered OAuth client ID |
+| `client_secret` | No | Required for confidential clients |
+| `code_verifier` | Yes | The original PKCE code verifier |
+
+Success response: `200 OK`
+
+```json
+{
+  "access_token": "eyJhbGciOiJSUzI1NiJ9...",
+  "token_type": "Bearer",
+  "expires_in": 900,
+  "refresh_token": "a1b2c3d4e5f6..."
+}
+```
+
+##### Client Credentials Grant
+
+Parameters:
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `grant_type` | Yes | Must be `client_credentials` |
+| `client_id` | Yes | The registered OAuth client ID |
+| `client_secret` | Yes | Required for confidential clients |
+
+Success response: `200 OK`
+
+```json
+{
+  "access_token": "eyJhbGciOiJSUzI1NiJ9...",
+  "token_type": "Bearer",
+  "expires_in": 900
+}
+```
+
+Note: `refresh_token` is not returned for the Client Credentials grant.
+
+##### Error Responses
+
+Token errors follow OAuth 2.1 error conventions:
+
+```json
+{
+  "error": "invalid_grant",
+  "error_description": "Authorization code has already been used."
+}
+```
+
+Error codes:
+
+| Error | HTTP Status | Description |
+|-------|-------------|-------------|
+| `invalid_request` | 400 | Missing required parameters |
+| `invalid_client` | 400 | Client not found, disabled, or secret mismatch |
+| `invalid_grant` | 400 | Authorization code invalid, expired, reused, or PKCE verification failed |
+| `unsupported_grant_type` | 400 | Grant type is not supported |
+| `unauthorized_client` | 400 | Client not authorized for the requested grant type |
+
+Authorization endpoint errors use the standard `ApiErrorResponse` format with error details in `fieldErrors`:
+
+```json
+{
+  "timestamp": "2026-07-08T10:00:00Z",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "Redirect URI does not match any registered URI.",
+  "path": "/oauth/authorize",
+  "fieldErrors": {
+    "error": "invalid_client"
+  }
+}
+```
+
 ## Authorization
 
-Authentication is performed via RS256 JWT access tokens. After JWT validation, the user's roles and permissions are loaded from the database and attached to the security context. This enables both `hasRole()` and `hasAuthority()` checks.
+Authentication is performed via RS256 JWT access tokens. OAuth token responses also return RS256 JWT access tokens issued by the same `JwtService`. After JWT validation, the user's roles and permissions are loaded from the database and attached to the security context. This enables both `hasRole()` and `hasAuthority()` checks.
 
 Default role for new users: `ROLE_USER`
 

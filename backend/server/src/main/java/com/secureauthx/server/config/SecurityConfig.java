@@ -38,10 +38,12 @@ public class SecurityConfig {
                                 "/swagger-ui/**"
                         ).permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/oauth/authorize", "/oauth/token").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/sessions", "/api/v1/sessions/current").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/sessions/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/roles", "/api/v1/permissions").authenticated()
                         .requestMatchers("/api/v1/organizations/**").authenticated()
+                        .requestMatchers("/api/v1/oauth/clients/**").hasRole("ADMIN")
                         .anyRequest().denyAll())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .httpBasic(AbstractHttpConfigurer::disable)

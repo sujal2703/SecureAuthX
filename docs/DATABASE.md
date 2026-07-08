@@ -72,6 +72,62 @@ Creates the `sessions` table for Sprint 03 session and device management.
 
 Creates the RBAC tables for Sprint 04 role-based access control.
 
+### `V7__Create_oauth_tables.sql`
+
+Creates three OAuth 2.1 tables for Sprint 06 authorization server.
+
+Tables:
+
+- `oauth_clients` — registered OAuth 2.1 clients.
+- `oauth_client_redirect_uris` — registered redirect URIs per client.
+- `oauth_authorization_codes` — authorization codes with PKCE challenges.
+
+Columns for `oauth_clients`:
+
+- `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+- `client_id VARCHAR(100) NOT NULL UNIQUE`
+- `client_secret VARCHAR(255)` (Argon2id hash, nullable for public clients)
+- `client_name VARCHAR(255) NOT NULL`
+- `confidential BOOLEAN NOT NULL DEFAULT false`
+- `enabled BOOLEAN NOT NULL DEFAULT true`
+- `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`
+- `updated_at TIMESTAMPTZ NOT NULL DEFAULT now()`
+
+Columns for `oauth_client_redirect_uris`:
+
+- `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+- `client_id UUID NOT NULL REFERENCES oauth_clients(id) ON DELETE CASCADE`
+- `redirect_uri VARCHAR(2048) NOT NULL`
+- `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`
+
+Columns for `oauth_authorization_codes`:
+
+- `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+- `code VARCHAR(255) NOT NULL UNIQUE`
+- `user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE`
+- `client_id UUID NOT NULL REFERENCES oauth_clients(id) ON DELETE CASCADE`
+- `redirect_uri VARCHAR(2048) NOT NULL`
+- `code_challenge VARCHAR(255) NOT NULL`
+- `challenge_method VARCHAR(10) NOT NULL DEFAULT 'S256'`
+- `expires_at TIMESTAMPTZ NOT NULL`
+- `consumed BOOLEAN NOT NULL DEFAULT false`
+- `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`
+
+Constraints and indexes:
+
+- `idx_oauth_clients_client_id` unique index on `client_id`.
+- `idx_oauth_client_redirect_uris_client_id` index for redirect URI lookups by client.
+- `idx_oauth_authorization_codes_code` unique index on `code`.
+- `idx_oauth_authorization_codes_user_id` index for user-based queries.
+- `idx_oauth_authorization_codes_client_id` index for client-based queries.
+
+Security notes:
+
+- Client secrets are hashed with Argon2id via Spring Security's `PasswordEncoder` bean.
+- Authorization codes are single-use (`consumed` flag) and expire after 10 minutes.
+- PKCE code challenges use SHA-256 (S256 method). Plain challenge method is not allowed.
+- Refresh tokens issued during authorization code grant use the same `refresh_tokens` table as user login.
+
 ### `V6__Create_organizations_tables.sql`
 
 Creates the organizations and organization_members tables for Sprint 05 multi-tenancy foundation.

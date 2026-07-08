@@ -3,6 +3,12 @@ package com.secureauthx.server.common.exception;
 import com.secureauthx.server.auth.exception.DuplicateEmailException;
 import com.secureauthx.server.auth.exception.InvalidCredentialsException;
 import com.secureauthx.server.auth.exception.InvalidTokenException;
+import com.secureauthx.server.oauth.exception.InvalidClientException;
+import com.secureauthx.server.oauth.exception.InvalidGrantException;
+import com.secureauthx.server.oauth.exception.InvalidRedirectUriException;
+import com.secureauthx.server.oauth.exception.InvalidScopeException;
+import com.secureauthx.server.oauth.exception.OAuthException;
+import com.secureauthx.server.oauth.exception.UnauthorizedClientException;
 import com.secureauthx.server.organization.exception.OrganizationAccessDeniedException;
 import com.secureauthx.server.organization.exception.OrganizationNotFoundException;
 import com.secureauthx.server.sessions.exception.SessionNotFoundException;
@@ -116,6 +122,21 @@ public class GlobalExceptionHandler {
                 exception.getMessage(),
                 request.getRequestURI(),
                 Map.of()
+        );
+    }
+
+    @ExceptionHandler(OAuthException.class)
+    ResponseEntity<ApiErrorResponse> handleOAuthException(
+            OAuthException exception,
+            HttpServletRequest request
+    ) {
+        Map<String, String> details = new LinkedHashMap<>();
+        details.put("error", exception.getErrorCode());
+        return buildResponse(
+                HttpStatus.BAD_REQUEST,
+                exception.getMessage(),
+                request.getRequestURI(),
+                details
         );
     }
 

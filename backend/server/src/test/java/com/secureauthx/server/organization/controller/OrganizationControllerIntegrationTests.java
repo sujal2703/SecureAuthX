@@ -14,6 +14,7 @@ import com.secureauthx.server.auth.repository.RefreshTokenRepository;
 import com.secureauthx.server.authorization.repository.UserRoleRepository;
 import java.util.UUID;
 import com.secureauthx.server.auth.repository.UserRepository;
+import com.secureauthx.server.oauth.repository.AuthorizationCodeRepository;
 import com.secureauthx.server.organization.entity.Organization;
 import com.secureauthx.server.organization.entity.OrganizationMember;
 import com.secureauthx.server.organization.entity.OrganizationRole;
@@ -66,6 +67,9 @@ class OrganizationControllerIntegrationTests {
     @Autowired
     private UserRoleRepository userRoleRepository;
 
+    @Autowired
+    private AuthorizationCodeRepository authorizationCodeRepository;
+
     private String accessToken;
     private UUID userId;
     private UUID personalOrgId;
@@ -77,6 +81,7 @@ class OrganizationControllerIntegrationTests {
         organizationRepository.deleteAll();
         sessionRepository.deleteAll();
         refreshTokenRepository.deleteAll();
+        authorizationCodeRepository.deleteAll();
         userRepository.deleteAll();
 
         User user = userRepository.save(new User("org-user@example.com", passwordEncoder.encode("OrgPass!2026")));

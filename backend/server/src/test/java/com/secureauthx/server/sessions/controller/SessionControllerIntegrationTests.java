@@ -16,6 +16,7 @@ import com.secureauthx.server.auth.repository.UserRepository;
 import com.secureauthx.server.organization.repository.OrganizationMemberRepository;
 import com.secureauthx.server.organization.repository.OrganizationRepository;
 import com.secureauthx.server.authorization.repository.UserRoleRepository;
+import com.secureauthx.server.oauth.repository.AuthorizationCodeRepository;
 import com.secureauthx.server.sessions.repository.SessionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -62,6 +63,9 @@ class SessionControllerIntegrationTests {
     @Autowired
     private UserRoleRepository userRoleRepository;
 
+    @Autowired
+    private AuthorizationCodeRepository authorizationCodeRepository;
+
     @BeforeEach
     void setUp() {
         userRoleRepository.deleteAll();
@@ -69,6 +73,7 @@ class SessionControllerIntegrationTests {
         organizationRepository.deleteAll();
         sessionRepository.deleteAll();
         refreshTokenRepository.deleteAll();
+        authorizationCodeRepository.deleteAll();
         userRepository.deleteAll();
         userRepository.save(new User("session-test@example.com", passwordEncoder.encode("S3cureExample!2026")));
     }

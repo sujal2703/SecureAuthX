@@ -13,6 +13,7 @@ Feature modules live under `com.secureauthx.server` using feature-first package 
 - `authorization`: role-based access control. Contains controller, service, repository, entities, DTOs, and authority loading.
 - `organization`: organizations and multi-tenancy foundation. Contains controller, service, repository, entities, DTOs, and org-specific exceptions.
 - `common`: shared API error response and global exception handling.
+- `oauth`: OAuth 2.1 authorization server. Contains controller, service, repository, entities, DTOs, PKCE service, and OAuth-specific exceptions.
 - `config`: security, JWT authentication filter, and OpenAPI configuration.
 
 ## Runtime Components
@@ -73,6 +74,17 @@ Sprint 05 organization endpoints require a valid Bearer JWT access token:
 - `POST /api/v1/organizations`
 - `PATCH /api/v1/organizations/{organizationId}`
 
+Sprint 06 OAuth 2.1 endpoints are publicly accessible (no authentication on the HTTP security layer; authorization endpoint uses `@PreAuthorize`):
+
+- `GET /oauth/authorize` — public at HTTP level, `@PreAuthorize("isAuthenticated()")` at method level
+- `POST /oauth/token` — fully public
+
+Sprint 06 client management endpoints require `ROLE_ADMIN`:
+
+- `POST /api/v1/oauth/clients`
+- `GET /api/v1/oauth/clients`
+- `GET /api/v1/oauth/clients/{id}`
+
 All other routes are denied by default until authorization flows are implemented in later sprints.
 
 ## Authorization Model
@@ -106,6 +118,24 @@ On every authenticated organization request, the `OrganizationService` loads the
 3. **Token Refresh**: Client submits the refresh token via `POST /api/v1/auth/refresh`. The token hash is verified. If valid, the old refresh token is revoked and new access and refresh tokens are issued (token rotation). A new session is created for the new device context.
 
 4. **Logout**: Client submits the refresh token via `POST /api/v1/auth/logout`. The refresh token is revoked. Other sessions for the same user remain active.
+
+### OAuth 2.1 Authorization Code Flow
+
+1. Client redirects the resource owner (authenticated user) to `GET /oauth/authorize` with `client_id`, `redirect_uri`, `response_type=code`, `state`, `code_challenge` (S256), and `code_challenge_method=S256`.
+2. Server validates: client exists and is enabled, redirect URI matches a registered URI exactly, PKCE challenge method is S256, and the user is authenticated.
+3. Server generates a random authorization code (32 bytes, Base64 URL-encoded), stores it with the PKCE challenge, user, client, and redirect URI. Code expires in 10 minutes.
+4. Server redirects the browser to `redirect_uri?code=...&state=...` (302 Found).
+5. Client sends `POST /oauth/token` with `grant_type=authorization_code`, `code`, `redirect_uri`, `client_id`, and `code_verifier`.
+6. Server validates: code exists, not consumed, not expired, belongs to the same client and redirect URI. PKCE verification: SHA-256 hash of `code_verifier` must match the stored `code_challenge`.
+7. Server marks the code as consumed (single-use). Creates a session and refresh token (SHA-256 hashed) for the user. Issues the same RS256 JWT access token used by the login flow.
+8. Client receives `{"access_token", "token_type": "Bearer", "expires_in", "refresh_token"}`.
+
+### OAuth 2.1 Client Credentials Flow
+
+1. Client sends `POST /oauth/token` with `grant_type=client_credentials`, `client_id`, and `client_secret`.
+2. Server validates: client exists, is enabled, is confidential (has a client secret), and the secret matches the Argon2id hash.
+3. Server issues an RS256 JWT access token with a random UUID subject. No refresh token, no session is created.
+4. Client receives `{"access_token", "token_type": "Bearer", "expires_in"}` (no `refresh_token`).
 
 ## JWT Configuration
 

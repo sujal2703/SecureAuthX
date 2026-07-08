@@ -22,13 +22,13 @@ Append new information where appropriate.
 
 # Current Phase
 
-Multi-Tenancy Foundation
+OAuth 2.1 Authorization Server
 
 ---
 
 # Current Sprint
 
-Sprint 05
+Sprint 06
 
 ---
 
@@ -138,11 +138,25 @@ Sprint 05 verification completed:
 - Flyway schema history contains successful migration `6 - Create organizations tables`.
 - `docker compose --env-file .env.example up --build -d` starts the stack (pending verification).
 
+Sprint 06 completed on 2026-07-08.
+
+Sprint 06 delivered an OAuth 2.1 Authorization Server. It added oauth_clients, oauth_client_redirect_uris, and oauth_authorization_codes tables via Flyway V7. Implemented PKCE service (S256 mandatory), OAuth client service (Argon2id secret hashing), authorization code service (10-minute expiry, single-use), and OAuth authorization service (auth code and client credentials grants). Added OAuthClientController (3 client management endpoints, ADMIN-only), OAuthAuthorizationController (GET /oauth/authorize with @PreAuthorize), and OAuthTokenController (POST /oauth/token with Map-based snake_case serialization). Added comprehensive OAuth exception hierarchy. Modified SecurityConfig to permit OAuth endpoints and restrict client management to ADMIN. Modified GlobalExceptionHandler to handle OAuthException with proper error codes. Updated three integration test cleanup methods to handle authorization_codes FK constraints in shared H2 context.
+
+Sprint 06 verification completed:
+
+- `./gradlew.bat build` succeeds (113 total tests: 77 unit + 35 integration + 1 API doc).
+- Unit tests cover PKCE verifier generation, S256 challenge computation, challenge verification, client creation with duplicate rejection, client retrieval, and authorization code lifecycle (create, consume, reject consumed/expired).
+- Integration tests cover full authorization code flow with PKCE, code reuse rejection, client credentials grant, invalid secret rejection, redirect URI mismatch, unsupported grant type, unauthenticated authorize, client CRUD with ADMIN-only enforcement, and unauthenticated/unauthorized client management.
+- Flyway schema history contains successful migration `7 - Create oauth tables`.
+- OAuth access tokens use the same RS256 JWT format as user login tokens and are usable for authenticated API calls.
+- Authorization codes are single-use and return `invalid_grant` on second exchange.
+- PKCE S256 verification uses constant-time comparison.
+
 ---
 
 # Work In Progress
 
-No active sprint implementation is in progress. Awaiting review before Sprint 06.
+No active sprint implementation is in progress. Sprint 06 completed. Awaiting review before Sprint 07.
 
 ---
 
@@ -162,7 +176,7 @@ Organizations & Multi-Tenancy Foundation
 
 Sprint 06
 
-OAuth 2.1
+OAuth 2.1 (COMPLETED)
 
 Sprint 07
 
@@ -192,7 +206,7 @@ Production Deployment
 
 # Test Results
 
-Total tests after Sprint 05: 75 (38 unit, 36 integration, 1 OpenAPI documentation test).
+Total tests after Sprint 06: 113 (77 unit, 35 integration, 1 OpenAPI documentation test).
 
 Test breakdown:
 
@@ -202,13 +216,17 @@ Test breakdown:
 - `src/test/java/com/secureauthx/server/auth/service/RegistrationServiceTests.java`: 2 tests (email normalization, duplicate rejection)
 - `src/test/java/com/secureauthx/server/sessions/service/SessionServiceTests.java`: 5 tests (create, list, revoke by id, revoke all, ownership check)
 - `src/test/java/com/secureauthx/server/sessions/service/UserAgentParserTests.java`: 5 tests (Chrome/Windows, Firefox/macOS, Safari/iOS, Edge/Android, null, empty)
-- `src/test/java/com/secureauthx/server/sessions/controller/SessionControllerIntegrationTests.java`: 7 tests (login creates session, list, current, revoke by id, revoke current, revoke all, multiple logins, not found, forbidden)
+- `src/test/java/com/secureauthx/server/sessions/controller/SessionControllerIntegrationTests.java`: 9 tests (login creates session, list, current, revoke by id, revoke current, revoke all, multiple logins, not found, forbidden)
 - `src/test/java/com/secureauthx/server/authorization/service/RoleServiceTests.java`: 2 tests (returns all roles, returns empty list)
 - `src/test/java/com/secureauthx/server/authorization/service/PermissionServiceTests.java`: 2 tests (returns all permissions, returns empty list)
 - `src/test/java/com/secureauthx/server/authorization/service/UserAuthorityServiceTests.java`: 2 tests (loads role and permission authorities, returns empty for user with no roles)
 - `src/test/java/com/secureauthx/server/authorization/controller/AuthorizationControllerIntegrationTests.java`: 5 tests (user can list roles, user can list permissions, unauthenticated returns forbidden for roles and permissions, response does not expose internal mappings)
 - `src/test/java/com/secureauthx/server/organization/service/OrganizationServiceTests.java`: 6 tests (create personal org, create org, list orgs, get current org, update as OWNER, update as MEMBER throws)
 - `src/test/java/com/secureauthx/server/organization/controller/OrganizationControllerIntegrationTests.java`: 8 tests (list orgs, get current, create org, update, unauthenticated forbidden, member cannot update, registration creates personal org)
+- `src/test/java/com/secureauthx/server/oauth/service/PKCEServiceTests.java`: 3 tests (verifier generation, computed challenge, invalid verifier rejection)
+- `src/test/java/com/secureauthx/server/oauth/service/OAuthClientServiceTests.java`: 3 tests (create client, duplicate rejection, get by ID)
+- `src/test/java/com/secureauthx/server/oauth/service/AuthorizationCodeServiceTests.java`: 3 tests (create, consume valid, reject consumed/expired)
+- `src/test/java/com/secureauthx/server/oauth/controller/OAuthIntegrationTests.java`: 11 tests (create and retrieve client, list clients, unauthenticated forbidden, non-admin forbidden, auth code flow, code reuse rejected, client credentials, invalid secret, redirect URI mismatch, unsupported grant type, unauthenticated authorize)
 - `src/test/java/com/secureauthx/server/config/OpenApiConfigTests.java`: 1 test (OpenAPI documentation)
 - `src/test/java/com/secureauthx/server/ServerApplicationTests.java`: 1 test (context loads)
 
@@ -310,15 +328,15 @@ ACTIVE
 
 Architecture
 
-UPDATED FOR SPRINT 05
+UPDATED FOR SPRINT 06
 
 Database
 
-UPDATED FOR SPRINT 05
+UPDATED FOR SPRINT 06
 
 API
 
-UPDATED FOR SPRINT 05
+UPDATED FOR SPRINT 06
 
 ---
 

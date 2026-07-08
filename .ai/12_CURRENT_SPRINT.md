@@ -1,112 +1,140 @@
-﻿# Sprint 05 - Organizations & Multi-Tenancy Foundation
+﻿# Sprint 06 - OAuth 2.1 Authorization Server
 
-Status: COMPLETED on 2026-07-07
+Status: COMPLETED on 2026-07-08
 
 ## Objective
 
-Implement a multi-tenancy foundation with organizations, auto-created personal organizations on registration, and organization-level roles (OWNER, ADMIN, MEMBER) separate from global RBAC roles.
+Implement an OAuth 2.1 Authorization Server supporting Authorization Code Flow with PKCE (S256 mandatory) and Client Credentials Flow. Reuse existing JWT, session, and refresh token infrastructure. No opaque tokens, no OIDC, no Implicit/Password/Device flows.
 
 ## Requirements
 
 ### Database
-- Create V6 Flyway migration with `organizations` and `organization_members` tables.
-- `organizations` columns: id, name, slug (unique), is_personal, created_at, updated_at.
-- `organization_members` columns: id, organization_id (FK), user_id (FK), role (OWNER/ADMIN/MEMBER), created_at.
-- Unique constraint on (organization_id, user_id).
-- Unique index on slug.
+- Create V7 Flyway migration with three tables: `oauth_clients`, `oauth_client_redirect_uris`, `oauth_authorization_codes`.
+- `oauth_clients` columns: id (UUID PK), client_id (unique VARCHAR 100), client_secret (hashed, nullable), client_name, confidential (boolean), enabled, created_at, updated_at.
+- `oauth_client_redirect_uris` columns: id (UUID PK), client_id (FK to oauth_clients ON DELETE CASCADE), redirect_uri (VARCHAR 2048), created_at.
+- `oauth_authorization_codes` columns: id (UUID PK), code (unique VARCHAR 255), user_id (FK to users), client_id (FK to oauth_clients), redirect_uri, code_challenge, challenge_method (default S256), expires_at, consumed (boolean), created_at.
+- Unique index on `oauth_clients.client_id` and `oauth_authorization_codes.code`.
+- Secondary indexes on FKs.
 
 ### Domain Model
-- Entities: `Organization`, `OrganizationMember`, `OrganizationRole` enum (OWNER, ADMIN, MEMBER).
-- Repositories with `JOIN FETCH` queries to avoid lazy loading issues.
-- DTOs exposing safe fields (id, name, slug, isPersonal, role, createdAt, updatedAt).
+- Entities: `OAuthClient`, `OAuthClientRedirectUri`, `AuthorizationCode`.
+- Repositories with `JOIN FETCH` queries.
+- DTOs: `CreateClientRequest`, `CreateClientResponse`, `ClientResponse`, `TokenResponse`.
+- OAuth exception hierarchy: `OAuthException` (abstract), `InvalidClientException`, `InvalidGrantException`, `InvalidRedirectUriException`, `InvalidScopeException`, `UnauthorizedClientException`.
 
-### Organization Service
-- `createPersonalOrganization(User)`: creates a personal org with slug from user's email prefix.
-- `createOrganization(User, CreateOrganizationRequest)`: creates a non-personal org with slug from name.
-- `getOrganizationsForUser(User)`: returns all orgs the user belongs to.
-- `getOrganizationForUser(UUID, User)`: returns a single org if the user is a member.
-- `updateOrganization(UUID, UpdateOrganizationRequest, User)`: updates org metadata, enforces OWNER/ADMIN role check.
-- Slug generation: lowercase, replace spaces with hyphens, strip non-alphanumeric, deduplicate on collision.
+### Services
+- **PKCEService**: generates code verifiers (32 bytes, Base64 URL), computes S256 challenges (SHA-256 + Base64 URL), verifies challenges via constant-time comparison.
+- **OAuthClientService**: creates clients (validates uniqueness, hashes secrets with Argon2id), retrieves clients by ID or client_id, authenticates clients (checks enabled, validates secret for confidential clients).
+- **AuthorizationCodeService**: creates codes (random 32 bytes, Base64 URL, 10-minute expiry), consumes codes with validation (exists, not consumed, not expired, same client, same redirect_uri).
+- **OAuthAuthorizationService**: validates authorization requests (client, redirect URI, response type, PKCE), handles authorization code grant (PKCE verification, session creation, token issuance), handles client credentials grant (confidential check only).
 
 ### API
-- `GET /api/v1/organizations` — list user's organizations.
-- `GET /api/v1/organizations/current` — get personal organization.
-- `POST /api/v1/organizations` — create a new organization.
-- `PATCH /api/v1/organizations/{organizationId}` — update organization (OWNER/ADMIN only).
-- All endpoints require `isAuthenticated()`.
+- `POST /api/v1/oauth/clients` — create OAuth client (ADMIN only).
+- `GET /api/v1/oauth/clients` — list all OAuth clients (ADMIN only).
+- `GET /api/v1/oauth/clients/{id}` — get OAuth client by ID (ADMIN only).
+- `GET /oauth/authorize` — authorization endpoint (authenticated user, public at HTTP level, @PreAuthorize).
+- `POST /oauth/token` — token endpoint (public).
 
-### Default Behavior
-- Every registered user automatically receives a personal organization with role `OWNER`.
-- Personal organizations have `isPersonal = true`.
-- No invitation, member management, or deletion endpoints in this sprint.
+### PKCE
+- S256 challenge method is mandatory. Plain method is rejected.
+- Code verifier must be 43–128 characters.
+- Challenge verification uses `MessageDigest.isEqual()` for timing-safe comparison.
+
+### Error Handling
+- Token endpoint errors follow OAuth 2.1 spec: `{"error": "xxx", "error_description": "yyy"}` with HTTP 400.
+- Authorization endpoint errors use `ApiErrorResponse` with `fieldErrors.error` containing the OAuth error code.
+- Error codes: `invalid_request`, `invalid_client`, `invalid_grant`, `unsupported_grant_type`, `unauthorized_client`.
 
 ## Architecture Decisions
 
-### Roles Separation
-- Organization roles (OWNER, ADMIN, MEMBER) are stored in `organization_members.role`.
-- Global RBAC roles (`ROLE_USER`, `ROLE_ADMIN`) remain in the `roles` table.
-- These are never merged or crossed.
+### Token Reuse
+- OAuth issues the same RS256 JWT access tokens as the login flow via `JwtService.createAccessToken()`. No separate token type or opaque tokens.
+- Refresh tokens are stored in the existing `refresh_tokens` table (SHA-256 hashed), same as user login.
 
-### Personal Organization Creation
-- `RegistrationService.register()` calls `OrganizationService.createPersonalOrganization()`.
-- Personal org slug is derived from the email prefix (first part before @).
-- If the slug already exists, a numeric suffix is appended for deduplication.
+### Client Secret Hashing
+- Client secrets are hashed with the same Argon2id `PasswordEncoder` bean used for user passwords.
+- Raw secret is returned only in the create response. Subsequent retrievals return `null` for `clientSecret`.
 
-### Access Control
-- Organization endpoints use `@PreAuthorize("isAuthenticated()")`.
-- Per-org role checks are performed in the service layer, not at the HTTP security level.
-- `OrganizationService.getOrganizationForUser()` verifies membership and throws `OrganizationNotFoundException` (404) or `OrganizationAccessDeniedException` (403).
+### PKCE S256 Mandatory
+- Authorization Code Flow requires PKCE with S256. This is an OAuth 2.1 requirement.
+- Public clients (no secret) and confidential clients both require PKCE.
 
-### Exception Handling
-- `OrganizationNotFoundException` → 404 via `GlobalExceptionHandler`.
-- `OrganizationAccessDeniedException` → 403 via `GlobalExceptionHandler`.
+### Redirect URI Matching
+- Exact string match against registered URIs. No pattern, wildcard, or host matching.
+- Multiple redirect URIs per client are supported.
 
-### Slug Generation
-- Lowercase the name.
-- Replace spaces and consecutive hyphens with a single hyphen.
-- Strip non-alphanumeric characters except hyphens.
-- Trim leading/trailing hyphens.
-- Append numeric suffix if slug already exists.
+### Authorization Code Security
+- Single-use (consumed flag set on first exchange, second use returns `invalid_grant`).
+- 10-minute expiry (hardcoded in `AuthorizationCodeService`).
+- Bound to specific client and redirect URI — mismatch returns `invalid_grant`.
+
+### Client Credentials Restriction
+- Only confidential clients (with a client secret) can use the client credentials grant.
+- Public clients attempting client credentials receive `unauthorized_client`.
+
+### Response Serialization
+- Token responses use `Map<String, Object>` with snake_case keys (`access_token`, `token_type`, `expires_in`, `refresh_token`, `scope`) to comply with OAuth 2.1 wire format.
+- `refresh_token` is omitted from client credentials grant responses.
+
+### Test Cleanup
+- All integration test `@BeforeEach` methods delete `oauth_authorization_codes` before deleting `users` or `oauth_clients` to avoid FK constraint violations in the shared H2 test context.
 
 ## Files Changed
 
 ### New Files
-- `backend/server/src/main/resources/db/migration/V6__Create_organizations_tables.sql`
-- `organization/entity/OrganizationRole.java`
-- `organization/entity/Organization.java`
-- `organization/entity/OrganizationMember.java`
-- `organization/repository/OrganizationRepository.java`
-- `organization/repository/OrganizationMemberRepository.java`
-- `organization/dto/CreateOrganizationRequest.java`
-- `organization/dto/UpdateOrganizationRequest.java`
-- `organization/dto/OrganizationResponse.java`
-- `organization/exception/OrganizationNotFoundException.java`
-- `organization/exception/OrganizationAccessDeniedException.java`
-- `organization/service/OrganizationService.java`
-- `organization/controller/OrganizationController.java`
-- `organization/service/OrganizationServiceTests.java`
-- `organization/controller/OrganizationControllerIntegrationTests.java`
+- `backend/server/src/main/resources/db/migration/V7__Create_oauth_tables.sql`
+- `oauth/entity/OAuthClient.java`
+- `oauth/entity/OAuthClientRedirectUri.java`
+- `oauth/entity/AuthorizationCode.java`
+- `oauth/repository/OAuthClientRepository.java`
+- `oauth/repository/OAuthClientRedirectUriRepository.java`
+- `oauth/repository/AuthorizationCodeRepository.java`
+- `oauth/dto/CreateClientRequest.java`
+- `oauth/dto/CreateClientResponse.java`
+- `oauth/dto/ClientResponse.java`
+- `oauth/dto/TokenResponse.java`
+- `oauth/dto/AuthorizeRequest.java`
+- `oauth/dto/TokenRequest.java`
+- `oauth/exception/OAuthException.java`
+- `oauth/exception/InvalidClientException.java`
+- `oauth/exception/InvalidGrantException.java`
+- `oauth/exception/InvalidRedirectUriException.java`
+- `oauth/exception/InvalidScopeException.java`
+- `oauth/exception/UnauthorizedClientException.java`
+- `oauth/service/PKCEService.java`
+- `oauth/service/OAuthClientService.java`
+- `oauth/service/AuthorizationCodeService.java`
+- `oauth/service/OAuthAuthorizationService.java`
+- `oauth/controller/OAuthClientController.java`
+- `oauth/controller/OAuthAuthorizationController.java`
+- `oauth/controller/OAuthTokenController.java`
+- `oauth/service/PKCEServiceTests.java`
+- `oauth/service/OAuthClientServiceTests.java`
+- `oauth/service/AuthorizationCodeServiceTests.java`
+- `oauth/controller/OAuthIntegrationTests.java`
 
 ### Modified Files
-- `auth/service/RegistrationService.java`: injects OrganizationService, creates personal org on registration
-- `config/SecurityConfig.java`: adds `/api/v1/organizations/**` authenticated
-- `common/exception/GlobalExceptionHandler.java`: handles OrganizationNotFoundException (404) and OrganizationAccessDeniedException (403)
-- `auth/service/RegistrationServiceTests.java`: adds mock for OrganizationService
-- `sessions/controller/SessionControllerIntegrationTests.java`: adds cleanup for organization and user_role tables in @BeforeEach (shared H2 context)
-- `organization/controller/OrganizationControllerIntegrationTests.java`: adds UserRoleRepository cleanup in @BeforeEach
+- `config/SecurityConfig.java`: adds `/oauth/authorize` and `/oauth/token` as permitted; adds `hasRole("ADMIN")` for `/api/v1/oauth/clients/**`
+- `common/exception/GlobalExceptionHandler.java`: adds `@ExceptionHandler(OAuthException.class)` returning 400 with error code
+- `organization/controller/OrganizationControllerIntegrationTests.java`: adds `authorizationCodeRepository.deleteAll()` for FK cleanup
+- `sessions/controller/SessionControllerIntegrationTests.java`: adds `authorizationCodeRepository.deleteAll()` for FK cleanup
 
 ## Test Coverage
 
-- `OrganizationServiceTests`: 6 tests (create personal org, create org, list orgs, get current org, update org as OWNER, update org as MEMBER throws)
-- `OrganizationControllerIntegrationTests`: 8 tests (list orgs, get current, create org returns 201, update as owner, unauthenticated returns 403, member cannot update, registration creates personal org, slug generation)
-- Existing session and auth integration tests updated for shared H2 context cleanup
+- `PKCEServiceTests`: 3 tests (verifier generation, computed challenge matches known value, invalid verifier is rejected)
+- `OAuthClientServiceTests`: 3 tests (create client, reject duplicate client_id, retrieve client by ID)
+- `AuthorizationCodeServiceTests`: 3 tests (create code, consume valid code, reject consumed code, reject expired code)
+- `OAuthIntegrationTests`: 11 integration tests (create and retrieve client, list clients, unauthenticated management returns 403, non-admin cannot create client, full authorization code flow with PKCE, code cannot be reused, client credentials grant succeeds, invalid secret rejected, redirect URI mismatch rejected, unsupported grant type returns error, unauthenticated authorize returns 403)
 
 ## Verification
 
-- `./gradlew.bat build` succeeds with 75 tests passing.
-- Flyway V6 migration runs successfully.
-- Registered users automatically receive a personal organization with OWNER role.
-- Authenticated users can list, get current, create, and update organizations.
-- Unauthenticated requests to org endpoints return 403 Forbidden.
-- Non-members cannot access or update an organization (404/403).
-- MEMBER role users cannot update organization metadata (403).
+- `./gradlew.bat build` succeeds with 113 tests passing (75 pre-existing + 14 new OAuth + 24 pre-existing maintained across shared H2 context).
+- Flyway V7 migration runs successfully.
+- Authorization Code Flow with PKCE S256 produces valid tokens usable for API calls.
+- Authorization codes are single-use; second exchange returns `invalid_grant`.
+- Client Credentials Flow issues tokens for confidential clients.
+- Invalid client secrets return `invalid_client`.
+- Unregistered redirect URIs are rejected with 400.
+- Unsupported grant types return `unsupported_grant_type`.
+- Unauthenticated requests to `/oauth/authorize` return 403 Forbidden.
+- Client management endpoints require ROLE_ADMIN.
