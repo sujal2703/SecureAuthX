@@ -2,30 +2,30 @@
 
 ## Current Product Stage
 
-SecureAuthX is in Sprint 08: OpenID Connect 1.0 Provider.
+SecureAuthX is in Sprint 10: Developer Portal.
 
-The current product objective is implementing OpenID Connect 1.0 on top of the existing OAuth 2.1 Authorization Server, enabling SecureAuthX to act as an OpenID Provider (OP).
+The current product objective is implementing a self-service Developer Portal API that allows developers to create projects, manage API keys, rotate OAuth client secrets, view usage analytics, and configure rate limits.
 
-## Sprint 08 Scope
+## Sprint 10 Scope
 
 In scope:
 
-- ID Token generation (RS256 signed JWT) issued alongside Access Tokens when `scope=openid` is requested.
-- UserInfo endpoint (`GET /connect/userinfo`) returning `sub` and `email` for authenticated users.
-- OpenID Connect Discovery document (`GET /.well-known/openid-configuration`) following the Discovery spec.
-- JWKS endpoint (`GET /.well-known/jwks.json`) exposing the public RSA key.
-- Nonce parameter support — stored in authorization code, included in ID Token.
-- `openid` scope detection at token exchange time to conditionally issue ID Tokens.
-- Backward compatibility: OAuth flows without `openid` scope behave identically to Sprint 06.
-- All 147 existing tests pass (136 original + 11 new OIDC tests).
+- Developer project CRUD (create, list, get, update, delete) — each project belongs to a user and can optionally link an OAuth client.
+- API key management (create, list, revoke) — keys are SHA-256 hashed before storage; plaintext shown only at creation.
+- OAuth client secret rotation — generates a new random secret, hashes with Argon2id, updates the linked client; old secret immediately invalid.
+- Daily usage analytics per project (request count, success/failure counts, average latency, token exchanges, userinfo requests).
+- Rate limit management CRUD (set, get, delete) — stored but not enforced at runtime.
+- User isolation: users may only manage their own projects; admins can access all projects.
+- All 183 tests pass (147 pre-existing + 36 new developer portal tests).
 
 Out of scope:
 
-- Dynamic Client Registration.
-- RP-Initiated Logout, Front/Back Channel Logout.
-- Session Management.
-- Federation, Self-Issued OP, Identity Assurance.
-- SAML, SCIM.
+- Rate limit enforcement at runtime.
+- Usage analytics aggregation beyond daily records.
+- Frontend/UI for the developer portal (backend API only).
+- API key usage tracking in request filters (tracking endpoints exist but are not wired into request processing).
+- Webhook management.
+- Audit logs.
 
 ## Completed Sprints
 
@@ -38,7 +38,8 @@ Out of scope:
 - **Sprint 06**: OAuth 2.1 Authorization Server — Authorization Code + Client Credentials flows.
 - **Sprint 07**: Passkeys — WebAuthn/FIDO2 passwordless authentication.
 - **Sprint 08**: OpenID Connect 1.0 Provider — ID Tokens, UserInfo, Discovery, JWKS.
+- **Sprint 10**: Developer Portal — project management, API keys, secret rotation, usage analytics, rate limits.
 
 ## Success Criteria
 
-Sprint 08 succeeds when ID Tokens are correctly signed with RS256 and include `iss`, `sub`, `aud`, `exp`, `iat`, `auth_time`, and `nonce` claims, Discovery document returns all required metadata fields, JWKS endpoint exposes the public RSA key without exposing the private key, UserInfo returns user data for valid tokens and 401 for invalid/missing tokens, nonce is stored and included in the ID Token, OAuth flows without `openid` scope do not return ID Tokens, all 147 tests pass, and documentation is current.
+Sprint 10 succeeds when developers can create and manage projects via REST API, API keys are created with SHA-256 hashed storage and plaintext returned only once, OAuth client secrets can be rotated with immediate invalidation of the old secret, daily usage analytics are returned for specified date ranges, rate limit configuration can be created, read, and deleted, users are isolated to their own projects, all 183 tests pass, and documentation is current.

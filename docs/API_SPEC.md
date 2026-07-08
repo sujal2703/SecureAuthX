@@ -2,7 +2,7 @@
 
 ## Current API Stage
 
-Sprint 08 adds OpenID Connect 1.0 Provider support. SecureAuthX is now an OpenID Provider (OP), issuing ID Tokens alongside existing Access Tokens when the `openid` scope is requested. OIDC extends the existing OAuth 2.1 implementation without modifying the authorization or token flows.
+Sprint 10 adds the Developer Portal. Developers can now create projects, manage API keys, rotate OAuth client secrets, view usage analytics, and configure rate limits through a self-service REST API.
 
 ## Public Foundation Endpoints
 
@@ -971,6 +971,295 @@ Error responses:
 
 - `401 Unauthorized` when the access token is missing, expired, or invalid.
 - `404 Not Found` when the passkey does not exist or belongs to another user.
+
+## Developer Portal Endpoints
+
+All developer portal endpoints require a valid Bearer JWT access token in the `Authorization` header. Users may only manage their own developer projects; admins may access all projects.
+
+### Project Management
+
+#### `POST /api/v1/developer/projects`
+
+Creates a new developer project for the authenticated user. Optionally links an existing OAuth client.
+
+Request:
+
+```json
+{
+  "name": "My App",
+  "description": "A test application",
+  "oauthClientId": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+Validation:
+- `name` is required and must be 255 characters or fewer.
+- `description` is optional and must be 4000 characters or fewer.
+- `oauthClientId` is optional. If provided, the OAuth client is linked and its `owner_user_id` is set.
+
+Success response: `201 Created`
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440001",
+  "userId": "660e8400-e29b-41d4-a716-446655440002",
+  "name": "My App",
+  "description": "A test application",
+  "oauthClientId": "550e8400-e29b-41d4-a716-446655440000",
+  "enabled": true,
+  "createdAt": "2026-07-08T10:00:00Z",
+  "updatedAt": "2026-07-08T10:00:00Z"
+}
+```
+
+Error responses:
+- `400 Bad Request` for validation failures.
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+- `404 Not Found` when the referenced OAuth client does not exist.
+
+#### `GET /api/v1/developer/projects`
+
+Lists all developer projects for the authenticated user.
+
+Success response: `200 OK` (array of `ProjectResponse` objects — same schema as create response)
+
+#### `GET /api/v1/developer/projects/{projectId}`
+
+Returns a specific developer project by UUID. The project must belong to the authenticated user.
+
+Success response: `200 OK` (single `ProjectResponse`)
+
+Error responses:
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+- `404 Not Found` when the project does not exist or belongs to another user.
+
+#### `PUT /api/v1/developer/projects/{projectId}`
+
+Updates a developer project's name and/or description.
+
+Request:
+
+```json
+{
+  "name": "Updated App Name",
+  "description": "Updated description"
+}
+```
+
+Validation:
+- At least one field (`name` or `description`) should be provided.
+- `name` must be 255 characters or fewer.
+- `description` must be 4000 characters or fewer.
+
+Success response: `200 OK` (updated `ProjectResponse`)
+
+Error responses:
+- `400 Bad Request` for validation failures.
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+- `404 Not Found` when the project does not exist or belongs to another user.
+
+#### `DELETE /api/v1/developer/projects/{projectId}`
+
+Deletes a developer project and all associated API keys, usage records, and rate limits.
+
+Success response: `204 No Content`
+
+Error responses:
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+- `404 Not Found` when the project does not exist or belongs to another user.
+
+### API Key Management
+
+#### `POST /api/v1/developer/projects/{projectId}/api-keys`
+
+Creates a new API key for a developer project. The plaintext key is returned only in the create response. The key hash is stored as SHA-256.
+
+Request:
+
+```json
+{
+  "label": "Production Key",
+  "expiresAt": "2027-07-08T10:00:00Z"
+}
+```
+
+Validation:
+- `label` is required and must be 255 characters or fewer.
+- `expiresAt` is optional. If not set, the key does not expire.
+
+Success response: `201 Created`
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440003",
+  "projectId": "550e8400-e29b-41d4-a716-446655440001",
+  "keyPrefix": "sk_a1b2c3d4",
+  "plainTextKey": "sk_a1b2c3d4e5f6...",
+  "label": "Production Key",
+  "expiresAt": "2027-07-08T10:00:00Z",
+  "createdAt": "2026-07-08T10:00:00Z"
+}
+```
+
+Error responses:
+- `400 Bad Request` for validation failures.
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+- `404 Not Found` when the project does not exist or belongs to another user.
+
+#### `GET /api/v1/developer/projects/{projectId}/api-keys`
+
+Lists all API keys for a developer project. Key hashes and plaintext keys are never returned.
+
+Success response: `200 OK`
+
+```json
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440003",
+    "projectId": "550e8400-e29b-41d4-a716-446655440001",
+    "keyPrefix": "sk_a1b2c3d4",
+    "label": "Production Key",
+    "lastUsedAt": null,
+    "expiresAt": "2027-07-08T10:00:00Z",
+    "enabled": true,
+    "createdAt": "2026-07-08T10:00:00Z"
+  }
+]
+```
+
+Error responses:
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+- `404 Not Found` when the project does not exist or belongs to another user.
+
+#### `DELETE /api/v1/developer/projects/{projectId}/api-keys/{keyId}`
+
+Revokes an API key by setting it to disabled. The key record is retained for audit purposes.
+
+Success response: `204 No Content`
+
+Error responses:
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+- `404 Not Found` when the project or key does not exist or belongs to another user.
+
+### Secret Rotation
+
+#### `POST /api/v1/developer/projects/{projectId}/rotate-secret`
+
+Rotates the OAuth client secret for the project's linked OAuth client. The new secret is hashed with Argon2id before storage. The previous secret is immediately invalidated.
+
+The project must have a linked OAuth client (set via `oauthClientId` at creation time).
+
+Success response: `200 OK`
+
+```json
+{
+  "projectId": "550e8400-e29b-41d4-a716-446655440001",
+  "oauthClientId": "550e8400-e29b-41d4-a716-446655440000",
+  "newClientSecret": "base64url-new-secret-value",
+  "rotatedAt": "2026-07-08T10:00:00Z"
+}
+```
+
+Error responses:
+- `400 Bad Request` when the project has no linked OAuth client.
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+- `404 Not Found` when the project does not exist or belongs to another user.
+
+### Usage Analytics
+
+#### `GET /api/v1/developer/projects/{projectId}/usage`
+
+Returns daily usage analytics for a developer project within a specified date range.
+
+Query parameters:
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `startDate` | Yes | Start date (inclusive) in ISO-8601 format (e.g., `2026-07-01`) |
+| `endDate` | Yes | End date (inclusive) in ISO-8601 format (e.g., `2026-07-08`) |
+
+Success response: `200 OK`
+
+```json
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440004",
+    "projectId": "550e8400-e29b-41d4-a716-446655440001",
+    "date": "2026-07-07",
+    "requestCount": 1500,
+    "successCount": 1420,
+    "failureCount": 80,
+    "avgLatencyMs": 45.2,
+    "lastRequestAt": "2026-07-07T23:59:00Z",
+    "tokenExchanges": 300,
+    "userinfoRequests": 150
+  }
+]
+```
+
+Error responses:
+- `400 Bad Request` for invalid date parameters.
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+- `404 Not Found` when the project does not exist or belongs to another user.
+
+### Rate Limit Management
+
+Rate limit configuration is stored but not currently enforced at runtime. This is management-only CRUD.
+
+#### `PUT /api/v1/developer/projects/{projectId}/rate-limits`
+
+Creates or updates rate limit configuration for a developer project.
+
+Request:
+
+```json
+{
+  "requestsPerMinute": 120,
+  "requestsPerHour": 5000
+}
+```
+
+Validation:
+- `requestsPerMinute` must be between 1 and 10000.
+- `requestsPerHour` must be between 1 and 1000000.
+
+Success response: `200 OK`
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440005",
+  "projectId": "550e8400-e29b-41d4-a716-446655440001",
+  "requestsPerMinute": 120,
+  "requestsPerHour": 5000,
+  "enabled": true,
+  "createdAt": "2026-07-08T10:00:00Z",
+  "updatedAt": "2026-07-08T10:00:00Z"
+}
+```
+
+Error responses:
+- `400 Bad Request` for validation failures.
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+- `404 Not Found` when the project does not exist or belongs to another user.
+
+#### `GET /api/v1/developer/projects/{projectId}/rate-limits`
+
+Returns the current rate limit configuration for a developer project.
+
+Success response: `200 OK` (single `RateLimitResponse`)
+
+Error responses:
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+- `404 Not Found` when the project does not exist or belongs to another user, or rate limits are not configured.
+
+#### `DELETE /api/v1/developer/projects/{projectId}/rate-limits`
+
+Removes the rate limit configuration for a developer project.
+
+Success response: `204 No Content`
+
+Error responses:
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+- `404 Not Found` when the project does not exist or belongs to another user.
 
 ## Authorization
 

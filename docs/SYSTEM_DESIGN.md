@@ -16,6 +16,7 @@ Feature modules live under `com.secureauthx.server` using feature-first package 
 - `oauth`: OAuth 2.1 authorization server. Contains controller, service, repository, entities, DTOs, PKCE service, and OAuth-specific exceptions.
 - `passkey`: WebAuthn/FIDO2 passkey support. Contains controller, services (registration, authentication, passkey CRUD, challenge management, COSE key parsing), repository, entities, DTOs, and passkey-specific exceptions.
 - `oidc`: OpenID Connect 1.0 Provider. Contains controller (discovery, JWKS, UserInfo), service (ID Token generation, JWK serialization), and DTOs.
+- `developer`: Developer Portal. Contains controller, services (project management, API key management, secret rotation, usage analytics, rate limit management), repository, entities, DTOs, and developer-specific exceptions.
 - `config`: security, JWT authentication filter, and OpenAPI configuration.
 
 ## Runtime Components
@@ -101,6 +102,22 @@ Sprint 08 OIDC endpoints:
 - `GET /.well-known/openid-configuration` — public
 - `GET /.well-known/jwks.json` — public
 - `GET /connect/userinfo` — public at HTTP layer; Bearer token validated in controller
+
+Sprint 10 Developer Portal endpoints require a valid Bearer JWT access token:
+
+- `POST /api/v1/developer/projects`
+- `GET /api/v1/developer/projects`
+- `GET /api/v1/developer/projects/{projectId}`
+- `PUT /api/v1/developer/projects/{projectId}`
+- `DELETE /api/v1/developer/projects/{projectId}`
+- `POST /api/v1/developer/projects/{projectId}/api-keys`
+- `GET /api/v1/developer/projects/{projectId}/api-keys`
+- `DELETE /api/v1/developer/projects/{projectId}/api-keys/{keyId}`
+- `POST /api/v1/developer/projects/{projectId}/rotate-secret`
+- `GET /api/v1/developer/projects/{projectId}/usage`
+- `PUT /api/v1/developer/projects/{projectId}/rate-limits`
+- `GET /api/v1/developer/projects/{projectId}/rate-limits`
+- `DELETE /api/v1/developer/projects/{projectId}/rate-limits`
 
 All other routes are denied by default until authorization flows are implemented in later sprints.
 

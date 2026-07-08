@@ -36,6 +36,9 @@ public class OAuthClient {
     @Column(name = "enabled", nullable = false)
     private boolean enabled;
 
+    @Column(name = "owner_user_id")
+    private UUID ownerUserId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
@@ -72,4 +75,7 @@ public class OAuthClient {
     public boolean isEnabled() { return enabled; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public OffsetDateTime getUpdatedAt() { return updatedAt; }
+    public void setHashedClientSecret(String hashedClientSecret) { this.hashedClientSecret = hashedClientSecret; }
+    public UUID getOwnerUserId() { return ownerUserId; }
+    public void setOwnerUserId(UUID ownerUserId) { this.ownerUserId = ownerUserId; }
 }

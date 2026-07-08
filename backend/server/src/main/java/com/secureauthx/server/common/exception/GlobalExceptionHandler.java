@@ -11,6 +11,9 @@ import com.secureauthx.server.oauth.exception.OAuthException;
 import com.secureauthx.server.oauth.exception.UnauthorizedClientException;
 import com.secureauthx.server.organization.exception.OrganizationAccessDeniedException;
 import com.secureauthx.server.organization.exception.OrganizationNotFoundException;
+import com.secureauthx.server.developer.exception.DeveloperProjectNotFoundException;
+import com.secureauthx.server.developer.exception.DeveloperApiKeyNotFoundException;
+import com.secureauthx.server.developer.exception.DeveloperAccessDeniedException;
 import com.secureauthx.server.passkey.exception.PasskeyNotFoundException;
 import com.secureauthx.server.passkey.exception.WebAuthnException;
 import com.secureauthx.server.sessions.exception.SessionNotFoundException;
@@ -162,6 +165,45 @@ public class GlobalExceptionHandler {
     ) {
         return buildResponse(
                 HttpStatus.NOT_FOUND,
+                exception.getMessage(),
+                request.getRequestURI(),
+                Map.of()
+        );
+    }
+
+    @ExceptionHandler(DeveloperProjectNotFoundException.class)
+    ResponseEntity<ApiErrorResponse> handleDeveloperProjectNotFound(
+            DeveloperProjectNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.NOT_FOUND,
+                exception.getMessage(),
+                request.getRequestURI(),
+                Map.of()
+        );
+    }
+
+    @ExceptionHandler(DeveloperApiKeyNotFoundException.class)
+    ResponseEntity<ApiErrorResponse> handleDeveloperApiKeyNotFound(
+            DeveloperApiKeyNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.NOT_FOUND,
+                exception.getMessage(),
+                request.getRequestURI(),
+                Map.of()
+        );
+    }
+
+    @ExceptionHandler(DeveloperAccessDeniedException.class)
+    ResponseEntity<ApiErrorResponse> handleDeveloperAccessDenied(
+            DeveloperAccessDeniedException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.FORBIDDEN,
                 exception.getMessage(),
                 request.getRequestURI(),
                 Map.of()

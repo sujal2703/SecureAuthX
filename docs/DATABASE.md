@@ -184,6 +184,77 @@ Changes:
 - `oauth_authorization_codes.nonce VARCHAR(255)` — stores the nonce parameter from the OIDC authorization request. Included in the ID Token and returned to the RP for replay detection.
 - `oauth_authorization_codes.scope VARCHAR(1000)` — stores the scope parameter from the authorization request. Used at token exchange time to determine whether an ID Token should be issued (when `scope` contains `openid`).
 
+### `V10__Create_developer_portal_tables.sql`
+
+Creates four tables for Sprint 10 Developer Portal support.
+
+Tables:
+
+- `developer_projects` — developer projects owned by users.
+- `developer_api_keys` — SHA-256 hashed API keys per project.
+- `developer_api_usage` — daily usage analytics per project.
+- `api_rate_limits` — rate limit configuration per project.
+
+Columns for `developer_projects`:
+
+- `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+- `user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE`
+- `name VARCHAR(255) NOT NULL`
+- `description VARCHAR(4000)`
+- `oauth_client_id UUID REFERENCES oauth_clients(id) ON DELETE SET NULL`
+- `enabled BOOLEAN NOT NULL DEFAULT true`
+- `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`
+- `updated_at TIMESTAMPTZ NOT NULL DEFAULT now()`
+
+Columns for `developer_api_keys`:
+
+- `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+- `project_id UUID NOT NULL REFERENCES developer_projects(id) ON DELETE CASCADE`
+- `key_hash VARCHAR(64) NOT NULL` (SHA-256 hex hash)
+- `key_prefix VARCHAR(8) NOT NULL` (first 8 chars of the raw key for identification)
+- `label VARCHAR(255) NOT NULL`
+- `last_used_at TIMESTAMPTZ`
+- `expires_at TIMESTAMPTZ`
+- `enabled BOOLEAN NOT NULL DEFAULT true`
+- `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`
+
+Columns for `developer_api_usage`:
+
+- `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+- `project_id UUID NOT NULL REFERENCES developer_projects(id) ON DELETE CASCADE`
+- `date DATE NOT NULL`
+- `request_count BIGINT NOT NULL DEFAULT 0`
+- `success_count BIGINT NOT NULL DEFAULT 0`
+- `failure_count BIGINT NOT NULL DEFAULT 0`
+- `avg_latency_ms DOUBLE PRECISION NOT NULL DEFAULT 0`
+- `last_request_at TIMESTAMPTZ`
+- `token_exchanges BIGINT NOT NULL DEFAULT 0`
+- `userinfo_requests BIGINT NOT NULL DEFAULT 0`
+- `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`
+- `updated_at TIMESTAMPTZ NOT NULL DEFAULT now()`
+
+Columns for `api_rate_limits`:
+
+- `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+- `project_id UUID NOT NULL REFERENCES developer_projects(id) ON DELETE CASCADE`
+- `requests_per_minute INTEGER NOT NULL DEFAULT 60`
+- `requests_per_hour INTEGER NOT NULL DEFAULT 1000`
+- `enabled BOOLEAN NOT NULL DEFAULT true`
+- `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`
+- `updated_at TIMESTAMPTZ NOT NULL DEFAULT now()`
+
+Additional changes:
+
+- `oauth_clients` gets a new column `owner_user_id UUID REFERENCES users(id) ON DELETE SET NULL` to track which user owns the client for the developer portal.
+
+Constraints and indexes:
+
+- `idx_developer_api_keys_key_hash` unique index on `key_hash`.
+- `idx_developer_projects_user_id` index for user-based project queries.
+- `idx_developer_api_keys_project_id` index for project-based key queries.
+- `idx_developer_api_usage_project_id` index for project-based usage queries.
+- `idx_api_rate_limits_project_id` index for project-based rate limit queries.
+
 ### `V6__Create_organizations_tables.sql`
 
 Creates the organizations and organization_members tables for Sprint 05 multi-tenancy foundation.

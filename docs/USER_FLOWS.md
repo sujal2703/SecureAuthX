@@ -2,7 +2,7 @@
 
 ## Current Stage
 
-Sprint 08 adds OpenID Connect 1.0 Provider support. SecureAuthX now functions as an OpenID Provider (OP), issuing ID Tokens, exposing a UserInfo endpoint, and providing Discovery and JWKS endpoints.
+Sprint 10 adds the Developer Portal. Developers can now create projects, manage API keys, rotate OAuth client secrets, view usage analytics, and configure rate limits through a self-service REST API.
 
 ## Developer Foundation Flow
 
@@ -138,6 +138,47 @@ Sprint 08 adds OpenID Connect 1.0 Provider support. SecureAuthX now functions as
 1. Client fetches `GET /.well-known/openid-configuration` to discover OP capabilities and endpoint URLs.
 2. Client fetches `GET /.well-known/jwks.json` to obtain the public RSA key for ID Token signature verification.
 
+## Developer Portal Flows
+
+### Project Management Flow
+
+1. Developer authenticates via login to obtain a JWT access token.
+2. Developer creates a project via `POST /api/v1/developer/projects` with a name, optional description, and optional OAuth client ID to link.
+3. Developer can list all their projects via `GET /api/v1/developer/projects`, view a single project via `GET /api/v1/developer/projects/{id}`, update via `PUT /api/v1/developer/projects/{id}`, or delete via `DELETE /api/v1/developer/projects/{id}`.
+4. Deleting a project cascades to all associated API keys, usage records, and rate limits.
+
+### API Key Management Flow
+
+1. Developer authenticates via login to obtain a JWT access token.
+2. Developer creates an API key via `POST /api/v1/developer/projects/{projectId}/api-keys` with a label and optional expiry.
+3. Backend generates a random 32-byte key, prefixes it with `sk_`, returns it as a Base64 URL-encoded string. The key is hashed with SHA-256 before storage — the plaintext key is shown only once.
+4. Developer can list keys via `GET /api/v1/developer/projects/{projectId}/api-keys` (only key prefix and label are visible, never the full key).
+5. Developer can revoke a key via `DELETE /api/v1/developer/projects/{projectId}/api-keys/{keyId}`. The key is disabled but retained for audit.
+6. Revoked keys cannot be re-enabled.
+
+### Secret Rotation Flow
+
+1. Developer authenticates via login to obtain a JWT access token.
+2. Developer must have a project linked to an OAuth client (via `oauthClientId` at project creation).
+3. Developer calls `POST /api/v1/developer/projects/{projectId}/rotate-secret`.
+4. Backend generates a new random 32-byte secret, hashes it with Argon2id, updates the OAuth client's stored hash, and returns the plaintext new secret (shown only once).
+5. The previous secret is immediately invalidated — no transition period.
+
+### Usage Analytics Flow
+
+1. Developer authenticates via login to obtain a JWT access token.
+2. Developer calls `GET /api/v1/developer/projects/{projectId}/usage?startDate=2026-07-01&endDate=2026-07-08`.
+3. Backend returns daily usage records (request count, success/failure counts, average latency, last request time, token exchanges, userinfo requests) for the specified date range.
+4. Usage data is aggregated per day per project.
+
+### Rate Limit Management Flow
+
+1. Developer authenticates via login to obtain a JWT access token.
+2. Developer configures rate limits via `PUT /api/v1/developer/projects/{projectId}/rate-limits` with `requestsPerMinute` and `requestsPerHour`.
+3. Developer can view the configuration via `GET /api/v1/developer/projects/{projectId}/rate-limits`.
+4. Developer can remove the configuration via `DELETE /api/v1/developer/projects/{projectId}/rate-limits`.
+5. Rate limit configuration is stored but not currently enforced at runtime — this is management-only CRUD.
+
 ## Future Flows
 
-Password reset, email verification, role assignment endpoints, invitation flows, member management, and developer portal are future sprint work.
+Password reset, email verification, role assignment endpoints, invitation flows, and member management are future sprint work.
