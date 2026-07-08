@@ -124,6 +124,33 @@ cd backend/server
 
 ---
 
+## Frontend
+
+The frontend is a Next.js 15 application with TypeScript, Tailwind CSS, shadcn/ui, and Lucide React.
+
+### Pages
+- `/login` — Sign in
+- `/register` — Create account
+- `/dashboard` — Overview with user stats and quick actions
+- `/dashboard/profile` — User profile and organization info
+- `/dashboard/sessions` — Session management (list, revoke)
+- `/dashboard/devices` — Device / passkey management
+- `/dashboard/settings` — Settings (placeholder)
+
+### Running the Frontend
+```bash
+cd frontend
+npm install
+npm run dev     # Development at http://localhost:3000
+npm run build   # Production build
+npm run test    # Run tests
+```
+
+### Environment
+Set `NEXT_PUBLIC_API_URL` to the backend URL (default: `http://localhost:8080`).
+
+---
+
 ## API Documentation
 
 Full API documentation is maintained in [docs/API_SPEC.md](docs/API_SPEC.md). All product APIs use `/api/v1/`.
@@ -138,7 +165,15 @@ Full API documentation is maintained in [docs/API_SPEC.md](docs/API_SPEC.md). Al
 - `GET /.well-known/jwks.json` — JWKS endpoint
 
 ### Authenticated Endpoints
+- `GET /connect/userinfo` — OIDC UserInfo (profile)
 - `GET /api/v1/sessions` — List sessions
+- `GET /api/v1/sessions/current` — Current session
+- `DELETE /api/v1/sessions/{id}` — Revoke session
+- `DELETE /api/v1/sessions/current` — Revoke current session
+- `DELETE /api/v1/sessions/all` — Revoke all sessions
+- `GET /api/v1/passkeys` — List passkeys
+- `DELETE /api/v1/passkeys/{id}` — Delete passkey
+- `GET /api/v1/organizations/current` — Current organization
 - `GET /api/v1/roles` — List roles
 - `POST /api/v1/developer/projects` — Create developer project
 
@@ -186,7 +221,7 @@ See [.env.example](.env.example) for all variables.
 .ai/            — Engineering handbook and sprint tracking
 docs/           — Architecture, API, database, deployment docs
 backend/        — Spring Boot backend application
-frontend/       — Next.js application (placeholder)
+frontend/       — Next.js application (Dashboard, Profile, Sessions, Devices, Settings)
 infrastructure/ — Infrastructure configs (placeholder)
 ```
 

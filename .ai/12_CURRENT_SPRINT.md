@@ -1,139 +1,150 @@
-﻿# Sprint 12 — Production Readiness (Release Candidate)
+﻿# Sprint F2 — Dashboard & User Experience (Frontend)
 
 Status: COMPLETED on 2026-07-08
 
 ## Objective
 
-Prepare SecureAuthX for production deployment. Focus on stability, security, performance, observability, deployment, and CI/CD.
+Transform the authentication frontend into a usable authenticated application with dashboard, profile, session management, device management, and improved navigation.
 
 ## Scope Implemented
 
-### 1. Production Profiles
-- `application.yml` — base config with `spring.profiles.active: ${SECUREAUTHX_PROFILE:local}`
-- `application-dev.yml` — development with debug logging and detailed health
-- `application-test.yml` — H2 in-memory, Redis disabled (pre-existing, updated)
-- `application-prod.yml` — production tuning: HikariCP, Tomcat threads, connection timeouts, Prometheus metrics, percentile config, batch JDBC operations
-- `ProductionConfig.java` — `@Profile("prod")` startup validation of required env vars (DB password, Redis password, JWT keys). Fails fast with meaningful messages.
+### 1. Dashboard
+- Welcome section with user greeting
+- User information display (email, name, sessions, devices)
+- Quick statistics cards (Account Status, Active Sessions, Registered Devices, Security Status)
+- User information card with session/device counts
+- Quick action buttons linking to Profile, Sessions, Devices
+- Security status indicator
 
-### 2. Observability
-- Added `micrometer-registry-prometheus` dependency
-- Prometheus endpoint exposed at `/actuator/prometheus`
-- Micrometer tags (`application=secureauthx`) on all metrics
-- Latency percentiles (SLO) and histogram configured for http.server.requests
-- Liveness and readiness probes enabled (pre-existing, verified working)
-- Build info endpoint (`/actuator/info`) reports artifact version
+### 2. Profile Page
+- Account details (email, name, role, user ID)
+- Organization information (name, role, creation date)
+- Integration with OIDC UserInfo endpoint for user profile data
+- Integration with Organizations API for organization data
 
-### 3. Structured Logging
-- `CorrelationFilter` generates unique request ID (`X-Request-ID`) for every request
-- Request ID set as MDC value (`requestId`) and returned as response header
-- Execution time measured and returned as `X-Execution-Time-Ms` response header
-- `JwtAuthenticationFilter` updated to set `userId` and `sessionId` in MDC when JWT is validated
-- Logback pattern updated to include `requestId`, `userId`, `sessionId` in every log line
+### 3. Sessions Management
+- List all active sessions with device information
+- Current session badge indicator
+- Device details (browser, OS, IP address, device name)
+- Session timestamps (created at, last activity)
+- Revoke individual session
+- Revoke all other sessions
+- Empty state when no sessions exist
+- Toast notifications for success/failure
 
-### 4. Security Hardening
-- `SecurityHeadersConfig` adds per-response headers:
-  - `Strict-Transport-Security: max-age=31536000; includeSubDomains`
-  - `X-Content-Type-Options: nosniff`
-  - `X-Frame-Options: DENY`
-  - `Referrer-Policy: strict-origin-when-cross-origin`
-  - `Permissions-Policy: camera=(), microphone=(), geolocation=()`
-  - `Cache-Control: no-store, max-age=0`
-  - `Content-Security-Policy: default-src 'none'; ... frame-ancestors 'none'; form-action 'self'`
-- `CorsConfig.java` — whitelist-based CORS via `SECUREAUTHX_CORS_ALLOWED_ORIGINS` env var
-- SecurityConfig updated with `.cors(cors -> {})` to enable Spring CORS processing
+### 4. Devices Management
+- List registered passkeys/WebAuthn devices
+- Device details (name, type, backup status, registration date)
+- Remove device with confirmation
+- Empty state for no registered devices
+- Toast notifications for success/failure
 
-### 5. Runtime Rate Limiting
-- `RateLimitingService` — Redis-backed sliding window counter per user/IP/endpoint
-- `RateLimitingFilter` — applies rate limits to `/api/v1/auth/login` (10/min), `/api/v1/auth/register` (10/min), `/api/v1/auth/refresh` (20/min)
-- Returns HTTP 429 with JSON error body when exceeded
-- `RateLimitConfig` — `@ConditionalOnProperty("secureauthx.rate-limiting.enabled")`, only active when explicitly enabled
-- Configurable via `SECUREAUTHX_RATE_LIMITING_ENABLED`, `SECUREAUTHX_RATE_LIMIT_DEFAULT_RPM`, `SECUREAUTHX_RATE_LIMIT_DEFAULT_RPH`
+### 5. Settings Page
+- Placeholder page with settings categories
+- Coming soon indicators for future settings
 
-### 6. Docker Improvements
-- Healthcheck updated to use `/actuator/health/liveness` with `--start-period=60s`
-- Production JVM options via `JAVA_OPTS` env: ZGC, MaxRAMPercentage=75%, ExitOnOutOfMemoryError, HeapDumpOnOOM
-- Runtime image remains `eclipse-temurin:21-jre-jammy` with non-root user
-- Multi-stage build preserved
+### 6. Navigation
+- Updated sidebar with: Dashboard, Profile, Sessions, Devices, Settings
+- Active route highlighting
+- Removed old placeholder nav items (Users, Security, Activity)
+- Header now displays dynamic page title and user email
+- Profile icon in header links to profile page
 
-### 7. GitHub Actions CI
-- Created `.github/workflows/ci.yml`
-- On push to main/develop and PR to main:
-  - Build with Gradle
-  - Run all 209 tests
-  - Verify Docker build
-  - Archive test reports on failure
-- Uses PostgreSQL and Redis service containers
+### 7. API Integration
+- OIDC UserInfo endpoint (`GET /connect/userinfo`) for user profile
+- Sessions endpoints:
+  - `GET /api/v1/sessions` — list sessions
+  - `DELETE /api/v1/sessions/{id}` — revoke session
+  - `DELETE /api/v1/sessions/all` — revoke all
+- Passkeys endpoints:
+  - `GET /api/v1/passkeys` — list devices
+  - `DELETE /api/v1/passkeys/{id}` — remove device
+- Organizations endpoint:
+  - `GET /api/v1/organizations/current` — get organization
 
-### 8. Performance
-- HikariCP pool: max-lifetime (30min), leak-detection-threshold (60s) configured
-- Tomcat: max-threads (200), min-spare (10), connection-timeout (5s), max-connections (10000), accept-count (100)
-- Redis connection pooling (lettuce): max-active (16), max-idle (8), min-idle (2)
-- Hibernate batch operations: batch_size (25), order_inserts/updates enabled
-- Compression: mime-types extended, min-response-size (2KB)
+### 8. Authentication Context
+- Added `fetchProfile` to fetch user info via OIDC UserInfo
+- User profile is fetched after login, register, and token refresh
+- Graceful fallback if profile fetch fails
 
-### 9. Documentation
-- `README.md` — created with project overview, features, architecture, tech stack, quick start, API overview, profiles, env vars, roadmap, license
-- `docs/DEPLOYMENT.md` — created with local/prod deployment, JWT key generation, scaling, health checks, monitoring, security
-- `docs/PRODUCTION.md` — created with pre/post-deployment checklists, architecture diagram, troubleshooting
-- `IMPLEMENTATION_PLAN.md` — updated top section
-- `.ai/12_CURRENT_SPRINT.md` — updated
-- `.ai/13_PROJECT_MEMORY.md` — updated
-- `.env.example` — updated with all new variables
+### 9. Testing
+- Dashboard tests: renders welcome, stat cards, quick actions, user info
+- Profile tests: renders page, account details, organization, email display
+- Sessions tests: renders page, session cards, empty state, current badge
+- Navigation tests: renders all items, brand, sign out, active route highlight
+- Updated auth-context tests with profile service mock
+
+### 10. UI/UX
+- Consistent use of shadcn/ui components (Card, Button, Skeleton, Alert, Toast)
+- Lucide React icons throughout
+- Loading states with Skeleton components
+- Error states with Alert components
+- Empty states with descriptive messages
+- Toast notifications for actions
+- Responsive grid layouts
+
+## API Integrations Used
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/connect/userinfo` | GET | Fetch user profile |
+| `/api/v1/sessions` | GET | List active sessions |
+| `/api/v1/sessions/{id}` | DELETE | Revoke session |
+| `/api/v1/sessions/all` | DELETE | Revoke all sessions |
+| `/api/v1/passkeys` | GET | List registered devices |
+| `/api/v1/passkeys/{id}` | DELETE | Remove device |
+| `/api/v1/organizations/current` | GET | Get organization info |
+
+## Files Created
+
+### Frontend Source
+- `frontend/src/types/api.ts` — API response types (Session, Passkey, Organization, UserInfo)
+- `frontend/src/services/profile-service.ts` — Profile/OIDC service
+- `frontend/src/services/session-service.ts` — Session management service
+- `frontend/src/services/passkey-service.ts` — Passkey/device service
+- `frontend/src/services/organization-service.ts` — Organization service
+- `frontend/src/app/dashboard/profile/page.tsx` — Profile page
+- `frontend/src/app/dashboard/sessions/page.tsx` — Sessions page
+- `frontend/src/app/dashboard/devices/page.tsx` — Devices page
+- `frontend/src/app/dashboard/settings/page.tsx` — Settings placeholder
+
+### Tests
+- `frontend/__tests__/dashboard.test.tsx` — Dashboard tests (4)
+- `frontend/__tests__/profile.test.tsx` — Profile tests (4)
+- `frontend/__tests__/sessions.test.tsx` — Sessions tests (4)
+- `frontend/__tests__/navigation.test.tsx` — Navigation tests (4)
+
+## Files Modified
+- `frontend/src/contexts/auth-context.tsx` — Added fetchProfile, profile integration
+- `frontend/src/components/layout/sidebar.tsx` — Updated navigation items
+- `frontend/src/components/layout/header.tsx` — Dynamic title, user display, profile link
+- `frontend/src/app/dashboard/page.tsx` — Rewritten with real user data
+- `frontend/__tests__/auth-context.test.tsx` — Added profile service mock
+- `README.md` — Updated with frontend info
+- `IMPLEMENTATION_PLAN.md` — Added Sprint F2
+- `.ai/12_CURRENT_SPRINT.md` — Updated
+- `.ai/13_PROJECT_MEMORY.md` — Updated
+
+## Verification
+- `npm run build` succeeds
+- `npm run lint` passes
+- `npm test` — all 20 frontend tests pass
+- No backend changes required
+- No placeholder code or TODO comments remain
 
 ## Architecture Decisions
 
-### Rate Limiting as Conditional Feature
-- Redis-backed rate limiting is disabled by default to avoid breaking existing tests
-- Enabled via `SECUREAUTHX_RATE_LIMITING_ENABLED=true`
-- `RateLimitConfig` uses `@ConditionalOnProperty` so the beans are only created when enabled
-- `SecurityConfig` uses `ObjectProvider<RateLimitingFilter>` for optional injection
+### Profile via OIDC UserInfo
+- No dedicated `/api/v1/users/me` endpoint exists
+- OIDC UserInfo endpoint (`/connect/userinfo`) provides user profile data
+- Given_name/family_name may be null if backend user entity lacks name fields
 
-### Correlation Filter at Highest Precedence
-- `CorrelationFilter` runs before the security filter chain to ensure MDC values are available for all downstream logging
-- Request ID is generated server-side if not provided by the client
+### React Query Usage
+- Sessions and devices pages use manual state management (useState + useEffect)
+- Consistent with existing dashboard pattern
+- React Query remains available for future pages requiring caching/refetching
 
-### Production Profile Validates at Startup
-- `ProductionConfig` checks required env vars on `@PostConstruct`
-- Application fails fast with descriptive message if any are missing
-- Prevents deployment with default/incomplete configuration
-
-## Files Created
-- `backend/server/src/main/resources/application-dev.yml`
-- `backend/server/src/main/resources/application-prod.yml`
-- `backend/server/src/main/java/com/secureauthx/server/config/ProductionConfig.java`
-- `backend/server/src/main/java/com/secureauthx/server/config/CorsConfig.java`
-- `backend/server/src/main/java/com/secureauthx/server/config/SecurityHeadersConfig.java`
-- `backend/server/src/main/java/com/secureauthx/server/config/CorrelationFilter.java`
-- `backend/server/src/main/java/com/secureauthx/server/config/RateLimitingService.java`
-- `backend/server/src/main/java/com/secureauthx/server/config/RateLimitingFilter.java`
-- `backend/server/src/main/java/com/secureauthx/server/config/RateLimitConfig.java`
-- `.github/workflows/ci.yml`
-- `README.md`
-- `docs/DEPLOYMENT.md`
-- `docs/PRODUCTION.md`
-
-## Files Modified
-- `build.gradle.kts` — added micrometer-registry-prometheus
-- `application.yml` — added profiles, prometheus, rate-limiting, cors config sections
-- `application-test.yml` — unchanged (pre-existing)
-- `logback-spring.xml` — updated pattern with requestId, userId, sessionId
-- `Dockerfile` — updated HEALTHCHECK, JAVA_OPTS
-- `.env.example` — added all new variables
-- `docker-compose.yml` — unchanged
-- `SecurityConfig.java` — added CORS, rate limiting filter, actuator endpoints
-- `JwtAuthenticationFilter.java` — added MDC population
-- `.ai/12_CURRENT_SPRINT.md` — updated
-- `.ai/13_PROJECT_MEMORY.md` — updated
-
-## Verification
-- `./gradlew.bat build` succeeds (209 tests passing)
-- `docker build -t secureauthx-server .` succeeds
-- `docker compose up -d` starts all 3 services (postgres, redis, backend)
-- `/actuator/health` returns `{"status":"UP","groups":["liveness","readiness"]}`
-- `/actuator/health/liveness` returns `{"status":"UP"}`
-- `/actuator/health/readiness` returns `{"status":"UP"}`
-- `/actuator/info` returns build artifact info
-- MDC values (requestId, userId, sessionId) appear in log output
-- Security headers present in all responses
-- CORS filter active with whitelist-based origins
-- Rate limiting ready when enabled via environment variable
+### Non-blocking Profile Fetch
+- Profile fetching via OIDC fails silently
+- User is considered authenticated even if profile fetch fails
+- Profile data populates when available

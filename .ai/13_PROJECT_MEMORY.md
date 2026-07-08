@@ -154,9 +154,15 @@ Sprint 06 verification completed:
 
 ---
 
+Sprint F2 completed on 2026-07-08.
+
+Sprint F2 delivered the Frontend Dashboard & User Experience sprint. It added 4 new pages (Dashboard rewrite, Profile, Sessions, Devices, Settings placeholder), 4 API services (profile, session, passkey, organization), 4 test suites (16 total), updated navigation sidebar, dynamic header, and real user data integration via OIDC UserInfo endpoint. All 20 frontend tests pass (4 existing + 16 new). See 12_CURRENT_SPRINT.md for full details.
+
+---
+
 # Work In Progress
 
-No active sprint implementation is in progress. Sprint 12 completed. Release candidate ready for production deployment.
+No active sprint implementation is in progress. Sprint 12 (backend) and Sprint F2 (frontend) completed.
 
 ---
 

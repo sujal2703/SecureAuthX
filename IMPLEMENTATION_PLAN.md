@@ -136,3 +136,19 @@ Only the tasks in `.ai/12_CURRENT_SPRINT.md` are in scope.
 - 3 new endpoints: discovery, jwks, userinfo.
 - 11 new tests: unit (3), integration (8).
 - All 147 tests pass.
+
+### Sprint F2 — Frontend Dashboard & User Experience (2026-07-08)
+
+- Dashboard page with welcome section, user stats, quick actions, security status
+- Profile page with account details, organization info, user ID
+- Sessions management: list, device info, revoke individual, revoke all
+- Devices management: list passkeys, device info, remove device
+- Settings placeholder page
+- Updated sidebar navigation (Dashboard, Profile, Sessions, Devices, Settings)
+- Dynamic header with page title and user email
+- API services: profile (OIDC UserInfo), sessions, passkeys, organizations
+- Auth context: profile fetching on login/register/refresh
+- 16 new frontend tests (dashboard, profile, sessions, navigation)
+- 4 existing frontend tests updated with profile service mock
+- Backend unchanged (uses existing APIs only)
+- `npm run build`, `npm run lint`, `npm test` — all pass

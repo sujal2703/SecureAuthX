@@ -1,11 +1,46 @@
+# Environment
 .env
 .env.*
 !.env.example
 
+# Java / Gradle
+.gradle/
 **/.gradle/
+build/
 **/build/
+.idea/
 **/.idea/
-**/*.iml
+*.iml
+out/
 **/out/
 
+# Logs
 *.log
+
+# Node.js
+node_modules/
+**/node_modules/
+
+# Next.js
+.next/
+**/.next/
+
+# Coverage
+coverage/
+**/coverage/
+
+# Build output
+dist/
+out/
+
+# Frontend environment
+frontend/.env
+frontend/.env.local
+
+# VS Code & OS
+.vscode/
+.DS_Store
+Thumbs.db
+
+# GitHub tooling
+.github/modernize/
