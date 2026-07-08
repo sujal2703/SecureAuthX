@@ -71,34 +71,55 @@ Only the tasks in `.ai/12_CURRENT_SPRINT.md` are in scope.
 9. Update `.ai/13_PROJECT_MEMORY.md` after completing Sprint 00 tasks.
 10. Stop after Sprint 00 is complete and wait for review.
 
-## Sprint 00 Completion Status
+## Sprint Completion Status
 
-Sprint 00 was completed on 2026-07-06.
-
-Verified outcomes:
+### Sprint 00 — Foundation (2026-07-06)
 
 - Backend build succeeds.
 - Backend tests pass.
 - Docker Compose builds and starts the backend, PostgreSQL, and Redis services.
-- PostgreSQL 17 is healthy and accepts queries.
-- Redis 7 is healthy and responds to ping.
-- Flyway migration `V1__Initial_foundation.sql` executes successfully.
-- `/actuator/health` returns `UP`.
+- PostgreSQL 17 / Redis 7 are healthy.
+- Flyway V1 baseline executes successfully.
+- `/actuator/health` returns UP.
 - `/v3/api-docs` returns SecureAuthX OpenAPI metadata.
-- Foundation documentation and project memory were updated.
 
-Sprint 01 user registration has been implemented.
+### Sprint 01 — Registration (2026-07-06)
 
-## Out of Scope
+- Public registration endpoint with email/password validation.
+- Argon2id password hashing, duplicate email rejection, consistent error responses.
 
-The following are explicitly not part of Sprint 00 and must not be implemented now:
+### Sprint 02 — Login, JWT, Refresh, Logout (2026-07-06)
 
-- Registration
-- Login
-- JWT
-- OAuth
-- OpenID Connect
-- Passkeys
-- Face authentication
-- Organizations
-- RBAC
+- RS256 JWT access tokens, refresh token rotation, SHA-256 hashed refresh tokens.
+- Login, refresh, logout endpoints.
+
+### Sprint 03 — Sessions (2026-07-07)
+
+- Session CRUD, user-agent parsing, current session tracking.
+- JWT carries `sessionId` claim.
+
+### Sprint 04 — RBAC (2026-07-07)
+
+- Roles/permissions/user_roles/role_permissions data model.
+- `@PreAuthorize` enforcement, `JwtAuthenticationFilter` loads authorities from DB.
+
+### Sprint 05 — Organizations (2026-07-07)
+
+- Organizations and organization_members tables.
+- Personal org auto-created on registration, OWNER/ADMIN/MEMBER roles.
+
+### Sprint 06 — OAuth 2.1 (2026-07-08)
+
+- Authorization Code Flow with PKCE S256, Client Credentials Flow.
+- Client management (CRUD), Argon2id client secrets.
+- OAuth token responses in snake_case convention.
+
+### Sprint 07 — Passkeys (2026-07-08)
+
+- WebAuthn registration and authentication flows.
+- COSE key parser (EC2 P-256/P-384/P-521, RSA).
+- Challenge management (5-minute expiry, single-use, purpose-based).
+- Signature verification, monotonic counter, RP ID hash, user verification enforcement.
+- JWT + refresh token issuance on passkey authentication.
+- 6 endpoints: register options, register verify, authenticate options, authenticate verify, list, delete.
+- All 136 tests pass.

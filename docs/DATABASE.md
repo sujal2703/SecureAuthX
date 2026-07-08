@@ -128,6 +128,53 @@ Security notes:
 - PKCE code challenges use SHA-256 (S256 method). Plain challenge method is not allowed.
 - Refresh tokens issued during authorization code grant use the same `refresh_tokens` table as user login.
 
+### `V8__Create_passkey_tables.sql`
+
+Creates the `passkeys` and `webauthn_challenges` tables for Sprint 07 WebAuthn/FIDO2 passkey support.
+
+Tables:
+
+- `passkeys` — stores WebAuthn public key credentials per user.
+- `webauthn_challenges` — stores one-time challenge strings for registration and authentication ceremonies.
+
+Columns for `passkeys`:
+
+- `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+- `user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE`
+- `credential_id VARCHAR(1024) NOT NULL`
+- `public_key BYTEA NOT NULL` (raw COSE-encoded public key bytes)
+- `counter BIGINT NOT NULL DEFAULT 0` (monotonically increasing signature counter)
+- `credential_type VARCHAR(50) NOT NULL DEFAULT 'public-key'`
+- `aaguid VARCHAR(36)` (authenticator AAGUID)
+- `device_name VARCHAR(255)` (user-provided device label)
+- `backed_up BOOLEAN NOT NULL DEFAULT false`
+- `transports VARCHAR(255)` (comma-separated transport hints: usb, internal, nfc, ble)
+- `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`
+- `updated_at TIMESTAMPTZ NOT NULL DEFAULT now()`
+
+Columns for `webauthn_challenges`:
+
+- `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+- `challenge VARCHAR(255) NOT NULL`
+- `user_id UUID REFERENCES users(id) ON DELETE CASCADE` (nullable for anonymous authentication flows)
+- `purpose VARCHAR(20) NOT NULL` (REGISTER or AUTHENTICATE)
+- `expires_at TIMESTAMPTZ NOT NULL` (5-minute expiry matching PKCE challenge pattern)
+- `used BOOLEAN NOT NULL DEFAULT false` (single-use tracking)
+- `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`
+
+Constraints and indexes:
+
+- `idx_passkeys_credential_id` unique index on `credential_id`.
+- `idx_passkeys_user_id` index for user-based passkey queries.
+- `idx_webauthn_challenges_challenge` index for challenge lookup.
+- `idx_webauthn_challenges_user_id` index for user-based challenge queries.
+
+Security notes:
+
+- Challenges are single-use (`used` flag) and expire after 5 minutes (matching the PKCE pattern from Sprint 06).
+- Challenge purpose (REGISTER vs AUTHENTICATE) is enforced at the application layer.
+- Public keys are stored as raw COSE CBOR bytes; parsed at runtime into `java.security.PublicKey`.
+
 ### `V6__Create_organizations_tables.sql`
 
 Creates the organizations and organization_members tables for Sprint 05 multi-tenancy foundation.

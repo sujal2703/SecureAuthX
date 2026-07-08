@@ -14,6 +14,7 @@ Feature modules live under `com.secureauthx.server` using feature-first package 
 - `organization`: organizations and multi-tenancy foundation. Contains controller, service, repository, entities, DTOs, and org-specific exceptions.
 - `common`: shared API error response and global exception handling.
 - `oauth`: OAuth 2.1 authorization server. Contains controller, service, repository, entities, DTOs, PKCE service, and OAuth-specific exceptions.
+- `passkey`: WebAuthn/FIDO2 passkey support. Contains controller, services (registration, authentication, passkey CRUD, challenge management, COSE key parsing), repository, entities, DTOs, and passkey-specific exceptions.
 - `config`: security, JWT authentication filter, and OpenAPI configuration.
 
 ## Runtime Components
@@ -85,6 +86,15 @@ Sprint 06 client management endpoints require `ROLE_ADMIN`:
 - `GET /api/v1/oauth/clients`
 - `GET /api/v1/oauth/clients/{id}`
 
+Sprint 07 passkey endpoints:
+
+- `POST /api/v1/passkeys/authenticate/options` — public
+- `POST /api/v1/passkeys/authenticate/verify` — public
+- `POST /api/v1/passkeys/register/options` — requires authentication (`@PreAuthorize("isAuthenticated()")`)
+- `POST /api/v1/passkeys/register/verify` — requires authentication (`@PreAuthorize("isAuthenticated()")`)
+- `GET /api/v1/passkeys` — requires authentication (`@PreAuthorize("isAuthenticated()")`)
+- `DELETE /api/v1/passkeys/{id}` — requires authentication (`@PreAuthorize("isAuthenticated()")`)
+
 All other routes are denied by default until authorization flows are implemented in later sprints.
 
 ## Authorization Model
@@ -136,6 +146,16 @@ On every authenticated organization request, the `OrganizationService` loads the
 2. Server validates: client exists, is enabled, is confidential (has a client secret), and the secret matches the Argon2id hash.
 3. Server issues an RS256 JWT access token with a random UUID subject. No refresh token, no session is created.
 4. Client receives `{"access_token", "token_type": "Bearer", "expires_in"}` (no `refresh_token`).
+
+### Passkey Authentication Flow
+
+1. **Registration — Generate Options**: Authenticated user calls `POST /api/v1/passkeys/register/options`. Server generates a random challenge (Base64 URL-encoded, 5-minute expiry), stores it as a `webauthn_challenges` record with purpose `REGISTER`, and returns `PublicKeyCredentialCreationOptions` (RP info, user info, supported algorithms including ES256 and RS256, resident key + user verification required, hints for security-key and platform authenticators).
+
+2. **Registration — Verify**: Authenticated user calls `POST /api/v1/passkeys/register/verify` with the authenticator's response (credential ID, client data JSON, attestation object, COSE public key, transports, AAGUID, device name). Server validates: challenge exists, not used, not expired, purpose is `REGISTER`, origin matches configured RP origin (`SECUREAUTHX_PASSKEY_RP_ORIGIN`), RP ID hash in authenticator data matches configured RP ID (`SECUREAUTHX_PASSKEY_RP_ID`). The COSE public key is parsed via `CoseKeyParser` (supports EC2 P-256/P-384/P-521 and RSA). The passkey is saved with initial counter 0.
+
+3. **Authentication — Generate Options**: Client (authenticated or not) calls `POST /api/v1/passkeys/authenticate/options` with an optional `userHandle`. If provided, server returns only credentials matching that user. Server generates a random challenge (same 5-minute pattern), stores it with purpose `AUTHENTICATE`, and returns `PublicKeyCredentialRequestOptions`.
+
+4. **Authentication — Verify**: Client calls `POST /api/v1/passkeys/authenticate/verify` with credential ID, authenticator data, client data JSON, signature, and user handle. Server validates: challenge exists, not used, not expired, purpose is `AUTHENTICATE`, origin matches, RP ID hash matches, user verification flag is set, credential exists and belongs to the user, counter is greater than stored value (monotonic increase enforced). The COSE public key from the stored passkey is parsed and used to verify the assertion signature. On success, the counter is updated, a JWT access token + refresh token pair is issued, and a session is created (same `JwtService` and `SessionService` as the login flow). On failure, returns `401 Unauthorized` without distinguishing the specific failure reason.
 
 ## JWT Configuration
 

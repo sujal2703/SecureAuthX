@@ -2,7 +2,7 @@
 
 ## Current API Stage
 
-Sprint 06 adds OAuth 2.1 Authorization Server support with Authorization Code Flow (PKCE S256 mandatory) and Client Credentials Flow. OIDC and passkeys remain out of scope.
+Sprint 07 adds WebAuthn/FIDO2 Passkey support for passwordless authentication and registration. Passkey endpoints coexist with existing email/password authentication, OAuth 2.1, and session management. OIDC remains out of scope.
 
 ## Public Foundation Endpoints
 
@@ -663,9 +663,205 @@ Authorization endpoint errors use the standard `ApiErrorResponse` format with er
 }
 ```
 
+## Passkey Endpoints
+
+All passkey endpoints live under `/api/v1/passkeys`.
+
+### `POST /api/v1/passkeys/register/options`
+
+Generates WebAuthn registration options (PublicKeyCredentialCreationOptions) for the authenticated user. Used in step 1 of passkey enrollment.
+
+Requires a valid Bearer JWT access token in the `Authorization` header.
+
+Success response: `200 OK`
+
+```json
+{
+  "challenge": "base64url-encoded-random-challenge",
+  "rp": {
+    "name": "SecureAuthX",
+    "id": "localhost"
+  },
+  "user": {
+    "id": "user-uuid",
+    "name": "user@example.com",
+    "displayName": "user@example.com"
+  },
+  "pubKeyCredParams": [
+    {"type": "public-key", "alg": -7},
+    {"type": "public-key", "alg": -257}
+  ],
+  "authenticatorSelection": {
+    "residentKey": "required",
+    "userVerification": "required",
+    "requireResidentKey": true
+  },
+  "hints": ["security-key", "platform"],
+  "attestation": {
+    "fmt": "none",
+    "alg": -7
+  }
+}
+```
+
+Error responses:
+
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+
+### `POST /api/v1/passkeys/register/verify`
+
+Verifies a WebAuthn registration and stores the passkey for the authenticated user. Used in step 2 of passkey enrollment.
+
+Requires a valid Bearer JWT access token in the `Authorization` header.
+
+Request:
+
+```json
+{
+  "id": "credential-id",
+  "rawId": "base64url-raw-id",
+  "type": "public-key",
+  "clientDataJSON": "base64url-client-data-json",
+  "attestationObject": "base64url-attestation-object",
+  "authenticatorData": "base64url-auth-data",
+  "publicKey": "base64url-cose-public-key",
+  "publicKeyAlgorithm": "-7",
+  "transports": "usb,internal,nfc",
+  "aaguid": "authenticator-aaguid",
+  "deviceName": "YubiKey 5 NFC"
+}
+```
+
+Success response: `200 OK`
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "verified": true,
+  "credentialId": "base64url-credential-id"
+}
+```
+
+Error responses:
+
+- `400 Bad Request` for invalid challenge, expired challenge, origin mismatch, RP ID mismatch, or malformed attestation.
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+
+### `POST /api/v1/passkeys/authenticate/options`
+
+Generates WebAuthn authentication options (PublicKeyCredentialRequestOptions). This endpoint is public (no authentication required).
+
+Request body is optional. If provided, `userHandle` filters the discoverable credentials for a specific user:
+
+```json
+{
+  "userHandle": "user-uuid"
+}
+```
+
+Success response: `200 OK`
+
+```json
+{
+  "challenge": "base64url-encoded-random-challenge",
+  "timeout": 60000,
+  "rpId": "localhost",
+  "allowCredentials": [
+    {
+      "type": "public-key",
+      "id": "base64url-credential-id",
+      "transports": ["usb", "internal", "nfc"]
+    }
+  ],
+  "userVerification": "required"
+}
+```
+
+When `userHandle` is not provided, `allowCredentials` is an empty array (discoverable credential / resident key flow).
+
+Error responses:
+
+- `400 Bad Request` when the specified user is not found.
+
+### `POST /api/v1/passkeys/authenticate/verify`
+
+Verifies a WebAuthn assertion and issues JWT + refresh tokens on success. This endpoint is public (no authentication required).
+
+Request:
+
+```json
+{
+  "id": "credential-id",
+  "rawId": "base64url-raw-id",
+  "type": "public-key",
+  "clientDataJSON": "base64url-client-data-json",
+  "authenticatorData": "base64url-auth-data",
+  "signature": "base64url-signature",
+  "userHandle": "user-uuid"
+}
+```
+
+Success response: `200 OK`
+
+```json
+{
+  "verified": true,
+  "credentialId": "base64url-credential-id",
+  "accessToken": "eyJhbGciOiJSUzI1NiJ9...",
+  "refreshToken": "a1b2c3d4e5f6...",
+  "expiresIn": 900,
+  "tokenType": "Bearer"
+}
+```
+
+Error responses:
+
+- `400 Bad Request` for invalid challenge, expired challenge, origin mismatch, RP ID hash mismatch, or malformed assertion.
+- `401 Unauthorized` when signature verification fails, credential not found, counter is less than stored value, or `userVerification` flag is not set.
+
+### `GET /api/v1/passkeys`
+
+Lists all registered passkeys for the authenticated user.
+
+Requires a valid Bearer JWT access token in the `Authorization` header.
+
+Success response: `200 OK`
+
+```json
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "credentialId": "base64url-credential-id",
+    "deviceName": "YubiKey 5 NFC",
+    "aaguid": "aaguid-value",
+    "credentialType": "public-key",
+    "backedUp": false,
+    "createdAt": "2026-07-08T10:00:00Z",
+    "updatedAt": "2026-07-08T10:00:00Z"
+  }
+]
+```
+
+Error responses:
+
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+
+### `DELETE /api/v1/passkeys/{id}`
+
+Deletes a specific passkey by UUID. The passkey must belong to the authenticated user.
+
+Requires a valid Bearer JWT access token in the `Authorization` header.
+
+Success response: `204 No Content`
+
+Error responses:
+
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+- `404 Not Found` when the passkey does not exist or belongs to another user.
+
 ## Authorization
 
-Authentication is performed via RS256 JWT access tokens. OAuth token responses also return RS256 JWT access tokens issued by the same `JwtService`. After JWT validation, the user's roles and permissions are loaded from the database and attached to the security context. This enables both `hasRole()` and `hasAuthority()` checks.
+Authentication is performed via RS256 JWT access tokens. OAuth token responses and passkey authentication responses also return RS256 JWT access tokens issued by the same `JwtService`. After JWT validation, the user's roles and permissions are loaded from the database and attached to the security context. This enables both `hasRole()` and `hasAuthority()` checks.
 
 Default role for new users: `ROLE_USER`
 

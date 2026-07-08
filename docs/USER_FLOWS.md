@@ -2,7 +2,7 @@
 
 ## Current Stage
 
-Sprint 06 includes OAuth 2.1 Authorization Server with Authorization Code Flow (PKCE S256 mandatory) and Client Credentials Flow.
+Sprint 07 includes WebAuthn/FIDO2 Passkey support for passwordless registration and authentication, alongside existing email/password, OAuth 2.1, and session management.
 
 ## Developer Foundation Flow
 
@@ -88,6 +88,33 @@ Sprint 06 includes OAuth 2.1 Authorization Server with Authorization Code Flow (
 4. **Token Issuance**: Server issues an RS256 JWT access token with a random UUID subject (no user context). No refresh token or session is created.
 5. **API Access**: Client uses the `access_token` as a Bearer token for API calls.
 
+## Passkey Flows
+
+### Prerequisites
+
+- Backend configured with `SECUREAUTHX_PASSKEY_RP_ID` (e.g., `localhost`) and `SECUREAUTHX_PASSKEY_RP_ORIGIN` (e.g., `http://localhost:3000`).
+- Client / browser supports the WebAuthn API (`navigator.credentials.create` and `navigator.credentials.get`).
+
+### Passkey Registration Flow
+
+1. User authenticates via email/password login to obtain a JWT access token.
+2. Client uses the Bearer JWT to call `POST /api/v1/passkeys/register/options`.
+3. Backend generates a random challenge, stores it with `REGISTER` purpose (5-minute expiry), and returns `PublicKeyCredentialCreationOptions` (RP info, user info, supported algorithms, authenticator selection with resident key + user verification required).
+4. Client calls `navigator.credentials.create({ publicKey: options })` with the server's response. The authenticator prompts for user verification (PIN, biometric, etc.).
+5. Client calls `POST /api/v1/passkeys/register/verify` with the authenticator's response (credential ID, client data JSON, attestation object, COSE public key, transports, AAGUID, device name).
+6. Backend validates: challenge exists and is not expired/used, origin matches, RP ID hash matches, parses the COSE public key, and stores the passkey for the user.
+7. User can view registered passkeys via `GET /api/v1/passkeys` and delete them via `DELETE /api/v1/passkeys/{id}`.
+
+### Passkey Authentication (Login) Flow
+
+1. Client calls `POST /api/v1/passkeys/authenticate/options` (no authentication required) with an optional `userHandle` to narrow credentials.
+2. Backend generates a random challenge, stores it with `AUTHENTICATE` purpose (5-minute expiry), and returns `PublicKeyCredentialRequestOptions` containing allowed credentials and the challenge.
+3. Client calls `navigator.credentials.get({ publicKey: options })`. The authenticator prompts for user verification.
+4. Client calls `POST /api/v1/passkeys/authenticate/verify` with the authenticator's assertion (credential ID, authenticator data, client data JSON, signature, user handle).
+5. Backend validates: challenge exists and is not expired/used, origin matches, RP ID hash matches, user verification flag is set, credential exists, counter is greater than stored value, and assertion signature is verified against the stored COSE public key.
+6. On success, backend updates the counter, issues a JWT access token + refresh token (same format as login), and creates a session.
+7. Client receives the same `{"accessToken", "refreshToken", "expiresIn", "tokenType"}` response as the login flow and can use it for subsequent API calls.
+
 ## Future Flows
 
-Password reset, email verification, OpenID Connect, passkeys, role assignment endpoints, invitation flows, member management, and developer portal are future sprint work.
+Password reset, email verification, OpenID Connect, role assignment endpoints, invitation flows, member management, and developer portal are future sprint work.

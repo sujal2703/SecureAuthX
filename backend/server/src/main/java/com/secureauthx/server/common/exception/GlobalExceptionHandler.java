@@ -11,6 +11,8 @@ import com.secureauthx.server.oauth.exception.OAuthException;
 import com.secureauthx.server.oauth.exception.UnauthorizedClientException;
 import com.secureauthx.server.organization.exception.OrganizationAccessDeniedException;
 import com.secureauthx.server.organization.exception.OrganizationNotFoundException;
+import com.secureauthx.server.passkey.exception.PasskeyNotFoundException;
+import com.secureauthx.server.passkey.exception.WebAuthnException;
 import com.secureauthx.server.sessions.exception.SessionNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.OffsetDateTime;
@@ -137,6 +139,32 @@ public class GlobalExceptionHandler {
                 exception.getMessage(),
                 request.getRequestURI(),
                 details
+        );
+    }
+
+    @ExceptionHandler(WebAuthnException.class)
+    ResponseEntity<ApiErrorResponse> handleWebAuthnException(
+            WebAuthnException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.BAD_REQUEST,
+                exception.getMessage(),
+                request.getRequestURI(),
+                Map.of()
+        );
+    }
+
+    @ExceptionHandler(PasskeyNotFoundException.class)
+    ResponseEntity<ApiErrorResponse> handlePasskeyNotFound(
+            PasskeyNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.NOT_FOUND,
+                exception.getMessage(),
+                request.getRequestURI(),
+                Map.of()
         );
     }
 

@@ -38,7 +38,9 @@ public class SecurityConfig {
                                 "/swagger-ui/**"
                         ).permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers("/api/v1/passkeys/authenticate/options", "/api/v1/passkeys/authenticate/verify").permitAll()
                         .requestMatchers("/oauth/authorize", "/oauth/token").permitAll()
+                        .requestMatchers("/api/v1/passkeys/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/sessions", "/api/v1/sessions/current").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/sessions/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/roles", "/api/v1/permissions").authenticated()
