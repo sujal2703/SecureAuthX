@@ -39,6 +39,8 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/api/v1/passkeys/authenticate/options", "/api/v1/passkeys/authenticate/verify").permitAll()
+                        .requestMatchers("/.well-known/openid-configuration", "/.well-known/jwks.json").permitAll()
+                        .requestMatchers("/connect/userinfo").permitAll()
                         .requestMatchers("/oauth/authorize", "/oauth/token").permitAll()
                         .requestMatchers("/api/v1/passkeys/**").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/sessions", "/api/v1/sessions/current").authenticated()

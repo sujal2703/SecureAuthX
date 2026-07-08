@@ -67,6 +67,8 @@ secureauthx:
   jwt:
     access-token-expiration-minutes: ${SECUREAUTHX_JWT_ACCESS_TOKEN_EXPIRATION_MINUTES:15}
     refresh-token-expiration-days: ${SECUREAUTHX_JWT_REFRESH_TOKEN_EXPIRATION_DAYS:7}
+  oidc:
+    issuer: ${SECUREAUTHX_OIDC_ISSUER:http://localhost:8080}
 
 logging:
   level:

@@ -12,6 +12,7 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.Date;
 import java.util.UUID;
@@ -71,6 +72,31 @@ public class JwtService {
 
     public long getAccessTokenExpirationSeconds() {
         return Duration.ofMinutes(accessTokenExpirationMinutes).toSeconds();
+    }
+
+    public PublicKey getPublicKey() {
+        return publicKey;
+    }
+
+    public String createIdToken(UUID userId, String email, String issuer, String audience, String nonce, Instant authTime) {
+        Instant now = Instant.now();
+        var builder = Jwts.builder()
+                .issuer(issuer)
+                .subject(userId.toString())
+                .audience().add(audience).and()
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(now.plus(1, ChronoUnit.HOURS)))
+                .signWith(privateKey, Jwts.SIG.RS256);
+        if (email != null) {
+            builder.claim("email", email);
+        }
+        if (nonce != null) {
+            builder.claim("nonce", nonce);
+        }
+        if (authTime != null) {
+            builder.claim("auth_time", authTime.getEpochSecond());
+        }
+        return builder.compact();
     }
 
     private KeyPair loadOrGenerateKeyPair() {

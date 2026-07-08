@@ -2,7 +2,7 @@
 
 ## Current API Stage
 
-Sprint 07 adds WebAuthn/FIDO2 Passkey support for passwordless authentication and registration. Passkey endpoints coexist with existing email/password authentication, OAuth 2.1, and session management. OIDC remains out of scope.
+Sprint 08 adds OpenID Connect 1.0 Provider support. SecureAuthX is now an OpenID Provider (OP), issuing ID Tokens alongside existing Access Tokens when the `openid` scope is requested. OIDC extends the existing OAuth 2.1 implementation without modifying the authorization or token flows.
 
 ## Public Foundation Endpoints
 
@@ -662,6 +662,119 @@ Authorization endpoint errors use the standard `ApiErrorResponse` format with er
   }
 }
 ```
+
+## OpenID Connect 1.0 Endpoints
+
+OIDC endpoints follow OpenID Connect Core 1.0 and Discovery specifications. The issuer is configured via `SECUREAUTHX_OIDC_ISSUER` (defaults to `http://localhost:8080`).
+
+### `GET /.well-known/openid-configuration`
+
+Returns the OpenID Connect Discovery document describing the OP's capabilities and endpoint URLs.
+
+Public endpoint (no authentication required).
+
+Success response: `200 OK`
+
+```json
+{
+  "issuer": "http://localhost:8080",
+  "authorization_endpoint": "http://localhost:8080/oauth/authorize",
+  "token_endpoint": "http://localhost:8080/oauth/token",
+  "userinfo_endpoint": "http://localhost:8080/connect/userinfo",
+  "jwks_uri": "http://localhost:8080/.well-known/jwks.json",
+  "response_types_supported": ["code"],
+  "subject_types_supported": ["public"],
+  "id_token_signing_alg_values_supported": ["RS256"],
+  "scopes_supported": ["openid", "email", "profile"],
+  "claims_supported": ["sub", "email", "given_name", "family_name", "iss", "aud", "exp", "iat", "auth_time", "nonce"],
+  "claims_parameter_supported": false,
+  "request_parameter_supported": false,
+  "request_uri_parameter_supported": false
+}
+```
+
+### `GET /.well-known/jwks.json`
+
+Returns the JSON Web Key Set containing the OP's public RSA key used to sign ID Tokens and Access Tokens.
+
+Public endpoint (no authentication required).
+
+Success response: `200 OK`
+
+```json
+{
+  "keys": [
+    {
+      "kty": "RSA",
+      "n": "base64url-encoded-modulus",
+      "e": "base64url-encoded-exponent",
+      "alg": "RS256",
+      "use": "sig",
+      "kid": "key-id"
+    }
+  ]
+}
+```
+
+### `GET /connect/userinfo`
+
+Returns claims about the authenticated end-user. The request must include a valid Bearer JWT access token (either from login or from an OAuth authorization code flow with the `openid` scope).
+
+The endpoint is publicly accessible; the Bearer token is validated inside the controller. Invalid or missing tokens return `401 Unauthorized`.
+
+Success response: `200 OK`
+
+```json
+{
+  "sub": "user-uuid",
+  "email": "user@example.com"
+}
+```
+
+Error responses:
+
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+
+### ID Token
+
+When the OAuth authorization request includes `scope=openid`, the token endpoint returns an `id_token` alongside the existing `access_token`, `refresh_token`, and `token_type` fields.
+
+The ID Token is a signed JWT (RS256) with the following standard claims:
+
+| Claim | Description |
+|-------|-------------|
+| `iss` | Issuer identifier (the OP's issuer URL) |
+| `sub` | Subject identifier (user UUID) |
+| `aud` | Audience (the OAuth client ID) |
+| `exp` | Expiration time (1 hour from issuance) |
+| `iat` | Issued at time |
+| `auth_time` | Authentication time (when the authorization code was created) |
+| `nonce` | Nonce from the authorization request (if provided) |
+
+Example decoded ID Token payload:
+
+```json
+{
+  "iss": "http://localhost:8080",
+  "sub": "550e8400-e29b-41d4-a716-446655440000",
+  "aud": ["my-client"],
+  "exp": 1710000000,
+  "iat": 1709996400,
+  "auth_time": 1709996400,
+  "nonce": "test-nonce-value"
+}
+```
+
+### OAuth + OIDC Integration
+
+When the scope parameter in the authorize request contains `openid`:
+
+1. The authorization code stores the scope and nonce.
+2. During token exchange, the server detects `openid` scope in the stored code.
+3. An ID Token is generated and returned in the token response as `id_token`.
+4. The scope is echoed back in the `scope` field of the token response.
+
+When the scope does NOT contain `openid`, behavior is identical to Sprint 06 (no ID Token, no scope in response).
 
 ## Passkey Endpoints
 

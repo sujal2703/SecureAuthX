@@ -2,7 +2,7 @@
 
 ## Current Stage
 
-Sprint 07 includes WebAuthn/FIDO2 Passkey support for passwordless registration and authentication, alongside existing email/password, OAuth 2.1, and session management.
+Sprint 08 adds OpenID Connect 1.0 Provider support. SecureAuthX now functions as an OpenID Provider (OP), issuing ID Tokens, exposing a UserInfo endpoint, and providing Discovery and JWKS endpoints.
 
 ## Developer Foundation Flow
 
@@ -115,6 +115,29 @@ Sprint 07 includes WebAuthn/FIDO2 Passkey support for passwordless registration 
 6. On success, backend updates the counter, issues a JWT access token + refresh token (same format as login), and creates a session.
 7. Client receives the same `{"accessToken", "refreshToken", "expiresIn", "tokenType"}` response as the login flow and can use it for subsequent API calls.
 
+## OpenID Connect Flows
+
+### OAuth + OIDC Authorization Code Flow
+
+1. **Prerequisite**: An admin registers an OAuth client (public or confidential). The client generates a PKCE code verifier and computes the S256 code challenge.
+2. **Authorization Request**: Client redirects the user's browser to `GET /oauth/authorize` with `client_id`, `redirect_uri`, `response_type=code`, `state`, `code_challenge`, `code_challenge_method=S256`, plus `scope=openid` and optionally `nonce`.
+3. **User Authentication**: The user must be authenticated. Server validates the client and redirect URI as before.
+4. **Code Issuance**: Server creates an authorization code that stores the `scope` and `nonce` values. Redirects the browser with `code` and `state`.
+5. **Token Exchange**: Client sends `POST /oauth/token` with the code, verifier, and client credentials. Server validates as before.
+6. **ID Token Issuance**: Because the scope contained `openid`, the server generates an RS256-signed ID Token with `iss`, `sub`, `aud`, `exp`, `iat`, `auth_time`, and `nonce` (if provided). The response includes `id_token` alongside `access_token` and `refresh_token`.
+7. **ID Token Verification**: Client validates the ID Token signature using the OP's public key from `/.well-known/jwks.json`. Verifies `iss`, `aud`, and `nonce`.
+
+### UserInfo Flow
+
+1. Client has an access token (from login or OAuth/OIDC flow).
+2. Client calls `GET /connect/userinfo` with `Authorization: Bearer <access_token>`.
+3. Server validates the token, looks up the user, and returns `{"sub": "user-uuid", "email": "user@example.com"}`.
+
+### Discovery and JWKS Flow
+
+1. Client fetches `GET /.well-known/openid-configuration` to discover OP capabilities and endpoint URLs.
+2. Client fetches `GET /.well-known/jwks.json` to obtain the public RSA key for ID Token signature verification.
+
 ## Future Flows
 
-Password reset, email verification, OpenID Connect, role assignment endpoints, invitation flows, member management, and developer portal are future sprint work.
+Password reset, email verification, role assignment endpoints, invitation flows, member management, and developer portal are future sprint work.

@@ -33,7 +33,8 @@ public class OAuthTokenController {
             @RequestParam(value = "client_id", required = false) String clientId,
             @RequestParam(value = "client_secret", required = false) String clientSecret,
             @RequestParam(value = "code_verifier", required = false) String codeVerifier,
-            @RequestParam(value = "scope", required = false) String scope
+            @RequestParam(value = "scope", required = false) String scope,
+            @RequestParam(value = "nonce", required = false) String nonce
     ) {
         try {
             if ("authorization_code".equals(grantType)) {
@@ -77,6 +78,9 @@ public class OAuthTokenController {
         }
         if (response.scope() != null) {
             map.put("scope", response.scope());
+        }
+        if (response.idToken() != null) {
+            map.put("id_token", response.idToken());
         }
         return map;
     }

@@ -13,6 +13,7 @@ import com.secureauthx.server.oauth.repository.OAuthClientRedirectUriRepository;
 import com.secureauthx.server.sessions.service.SessionService;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.HexFormat;
 import java.util.List;
@@ -36,6 +37,7 @@ public class OAuthAuthorizationService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final SessionService sessionService;
     private final long refreshTokenExpirationDays;
+    private final String oidcIssuer;
 
     public OAuthAuthorizationService(
             OAuthClientService oauthClientService,
@@ -45,7 +47,8 @@ public class OAuthAuthorizationService {
             JwtService jwtService,
             RefreshTokenRepository refreshTokenRepository,
             SessionService sessionService,
-            @Value("${secureauthx.jwt.refresh-token-expiration-days:7}") long refreshTokenExpirationDays
+            @Value("${secureauthx.jwt.refresh-token-expiration-days:7}") long refreshTokenExpirationDays,
+            @Value("${secureauthx.oidc.issuer:http://localhost:8080}") String oidcIssuer
     ) {
         this.oauthClientService = oauthClientService;
         this.authorizationCodeService = authorizationCodeService;
@@ -55,6 +58,7 @@ public class OAuthAuthorizationService {
         this.refreshTokenRepository = refreshTokenRepository;
         this.sessionService = sessionService;
         this.refreshTokenExpirationDays = refreshTokenExpirationDays;
+        this.oidcIssuer = oidcIssuer;
     }
 
     public OAuthClient validateAuthorizationRequest(
@@ -86,10 +90,12 @@ public class OAuthAuthorizationService {
     @Transactional
     public AuthorizationCode createAuthorizationCode(
             User user, OAuthClient client, String redirectUri,
-            String codeChallenge, String codeChallengeMethod
+            String codeChallenge, String codeChallengeMethod,
+            String nonce, String scope
     ) {
         return authorizationCodeService.createAuthorizationCode(
-                user, client, redirectUri, codeChallenge, codeChallengeMethod
+                user, client, redirectUri, codeChallenge, codeChallengeMethod,
+                nonce, scope
         );
     }
 
@@ -119,9 +125,30 @@ public class OAuthAuthorizationService {
         String accessToken = jwtService.createAccessToken(user.getId(), user.getEmail());
         long expiresIn = jwtService.getAccessTokenExpirationSeconds();
 
+        String scope = authCode.getScope();
+        boolean isOidc = scope != null && containsOpenIdScope(scope);
+
+        String idToken = null;
+        if (isOidc) {
+            String nonce = authCode.getNonce();
+            String clientIdValue = client.getClientId();
+            Instant authTime = authCode.getCreatedAt().toInstant();
+            idToken = jwtService.createIdToken(user.getId(), user.getEmail(), oidcIssuer, clientIdValue, nonce, authTime);
+            LOGGER.info("ID Token issued for user_id={} client_id={}", user.getId(), clientIdValue);
+        }
+
         LOGGER.info("Authorization code grant successful for user_id={} client_id={}", user.getId(), clientId);
 
-        return new TokenResponse(accessToken, expiresIn, rawRefreshToken);
+        return new TokenResponse(accessToken, expiresIn, rawRefreshToken, scope, idToken);
+    }
+
+    private boolean containsOpenIdScope(String scope) {
+        if (scope == null || scope.isBlank()) return false;
+        String[] scopes = scope.split("\\s+");
+        for (String s : scopes) {
+            if ("openid".equals(s)) return true;
+        }
+        return false;
     }
 
     @Transactional

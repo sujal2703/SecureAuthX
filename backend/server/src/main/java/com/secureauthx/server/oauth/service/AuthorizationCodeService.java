@@ -28,14 +28,16 @@ public class AuthorizationCodeService {
     @Transactional
     public AuthorizationCode createAuthorizationCode(
             User user, OAuthClient client, String redirectUri,
-            String codeChallenge, String challengeMethod
+            String codeChallenge, String challengeMethod,
+            String nonce, String scope
     ) {
         String code = generateAuthorizationCode();
         OffsetDateTime expiresAt = OffsetDateTime.now().plusMinutes(CODE_EXPIRATION_MINUTES);
 
         AuthorizationCode authCode = new AuthorizationCode(
                 code, user, client, redirectUri,
-                codeChallenge, challengeMethod, expiresAt
+                codeChallenge, challengeMethod, expiresAt,
+                nonce, scope
         );
         AuthorizationCode saved = authorizationCodeRepository.save(authCode);
 

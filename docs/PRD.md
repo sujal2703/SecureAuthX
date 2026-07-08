@@ -2,47 +2,43 @@
 
 ## Current Product Stage
 
-SecureAuthX is in Sprint 07: Passkeys (WebAuthn/FIDO2).
+SecureAuthX is in Sprint 08: OpenID Connect 1.0 Provider.
 
-The current product objective is passwordless authentication and passkey management using the WebAuthn API.
+The current product objective is implementing OpenID Connect 1.0 on top of the existing OAuth 2.1 Authorization Server, enabling SecureAuthX to act as an OpenID Provider (OP).
 
-## Sprint 07 Scope
+## Sprint 08 Scope
 
 In scope:
 
-- WebAuthn registration options generation (`POST /api/v1/passkeys/register/options`).
-- WebAuthn registration verification with origin, RP ID, and challenge validation (`POST /api/v1/passkeys/register/verify`).
-- WebAuthn authentication options generation with discoverable credential support (`POST /api/v1/passkeys/authenticate/options`).
-- WebAuthn authentication verification with signature verification, RP ID hash, user verification flag, and monotonic counter enforcement (`POST /api/v1/passkeys/authenticate/verify`).
-- JWT access token + refresh token issuance on successful passkey authentication.
-- Session creation on passkey authentication.
-- List registered passkeys (`GET /api/v1/passkeys`).
-- Delete passkey with ownership enforcement (`DELETE /api/v1/passkeys/{id}`).
-- COSE key parsing for EC2 (P-256, P-384, P-521) and RSA public keys.
-- Challenge management with 5-minute expiry and single-use enforcement.
-- Public passkey authentication endpoints (no JWT required for authenticate options/verify).
-- All 136 existing tests pass.
+- ID Token generation (RS256 signed JWT) issued alongside Access Tokens when `scope=openid` is requested.
+- UserInfo endpoint (`GET /connect/userinfo`) returning `sub` and `email` for authenticated users.
+- OpenID Connect Discovery document (`GET /.well-known/openid-configuration`) following the Discovery spec.
+- JWKS endpoint (`GET /.well-known/jwks.json`) exposing the public RSA key.
+- Nonce parameter support — stored in authorization code, included in ID Token.
+- `openid` scope detection at token exchange time to conditionally issue ID Tokens.
+- Backward compatibility: OAuth flows without `openid` scope behave identically to Sprint 06.
+- All 147 existing tests pass (136 original + 11 new OIDC tests).
 
 Out of scope:
 
-- OpenID Connect.
-- Social login.
-- MFA policies.
-- Browser frontend integration or UI.
-- FIDO2 CA / attestation verification beyond attestation type selection.
-- Passkey backup/export.
+- Dynamic Client Registration.
+- RP-Initiated Logout, Front/Back Channel Logout.
+- Session Management.
+- Federation, Self-Issued OP, Identity Assurance.
+- SAML, SCIM.
 
 ## Completed Sprints
 
-- **Sprint 00**: Project foundation — Docker, PostgreSQL, Redis, Flyway, OpenAPI, health checks, environment configuration, tests.
-- **Sprint 01**: User registration — email/password validation, Argon2id hashing, duplicate detection, consistent error responses.
-- **Sprint 02**: Login, JWT (RS256), token refresh with rotation, and logout.
-- **Sprint 03**: Session and device management — CRUD sessions, user-agent parsing, current session tracking.
-- **Sprint 04**: RBAC — roles, permissions, user-role-permission data model, `@PreAuthorize` enforcement.
-- **Sprint 05**: Organizations — multi-tenancy foundation, personal orgs, org membership with OWNER/ADMIN/MEMBER roles.
-- **Sprint 06**: OAuth 2.1 Authorization Server — Authorization Code Flow with PKCE S256, Client Credentials Flow, client management.
-- **Sprint 07**: Passkeys — WebAuthn/FIDO2 passwordless authentication and registration.
+- **Sprint 00**: Project foundation — Docker, PostgreSQL, Redis, Flyway, OpenAPI, health checks.
+- **Sprint 01**: User registration — email/password validation, Argon2id hashing.
+- **Sprint 02**: Login, JWT (RS256), token refresh with rotation, logout.
+- **Sprint 03**: Session and device management.
+- **Sprint 04**: RBAC — roles, permissions, `@PreAuthorize` enforcement.
+- **Sprint 05**: Organizations — multi-tenancy, personal orgs, OWNER/ADMIN/MEMBER roles.
+- **Sprint 06**: OAuth 2.1 Authorization Server — Authorization Code + Client Credentials flows.
+- **Sprint 07**: Passkeys — WebAuthn/FIDO2 passwordless authentication.
+- **Sprint 08**: OpenID Connect 1.0 Provider — ID Tokens, UserInfo, Discovery, JWKS.
 
 ## Success Criteria
 
-Sprint 07 succeeds when passkey registration creates a credential securely, passkey authentication issues JWT tokens, duplicate challenge usage is rejected, expired challenges are rejected, origin and RP ID validation rejects mismatched requests, monotonic counter enforcement rejects replayed assertions, signature verification rejects forged assertions, all 136 tests pass, and documentation is current.
+Sprint 08 succeeds when ID Tokens are correctly signed with RS256 and include `iss`, `sub`, `aud`, `exp`, `iat`, `auth_time`, and `nonce` claims, Discovery document returns all required metadata fields, JWKS endpoint exposes the public RSA key without exposing the private key, UserInfo returns user data for valid tokens and 401 for invalid/missing tokens, nonce is stored and included in the ID Token, OAuth flows without `openid` scope do not return ID Tokens, all 147 tests pass, and documentation is current.

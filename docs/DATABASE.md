@@ -175,6 +175,15 @@ Security notes:
 - Challenge purpose (REGISTER vs AUTHENTICATE) is enforced at the application layer.
 - Public keys are stored as raw COSE CBOR bytes; parsed at runtime into `java.security.PublicKey`.
 
+### `V9__Add_oidc_nonce_to_authorization_codes.sql`
+
+Adds `nonce` and `scope` columns to `oauth_authorization_codes` for Sprint 08 OpenID Connect 1.0 support.
+
+Changes:
+
+- `oauth_authorization_codes.nonce VARCHAR(255)` — stores the nonce parameter from the OIDC authorization request. Included in the ID Token and returned to the RP for replay detection.
+- `oauth_authorization_codes.scope VARCHAR(1000)` — stores the scope parameter from the authorization request. Used at token exchange time to determine whether an ID Token should be issued (when `scope` contains `openid`).
+
 ### `V6__Create_organizations_tables.sql`
 
 Creates the organizations and organization_members tables for Sprint 05 multi-tenancy foundation.

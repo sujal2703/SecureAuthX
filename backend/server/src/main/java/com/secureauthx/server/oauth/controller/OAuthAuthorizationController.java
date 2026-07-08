@@ -44,7 +44,8 @@ public class OAuthAuthorizationController {
             @RequestParam(required = false) String scope,
             @RequestParam String state,
             @RequestParam("code_challenge") String codeChallenge,
-            @RequestParam("code_challenge_method") String codeChallengeMethod
+            @RequestParam("code_challenge_method") String codeChallengeMethod,
+            @RequestParam(required = false) String nonce
     ) {
         OAuthClient client = oauthAuthorizationService.validateAuthorizationRequest(
                 clientId, redirectUri, responseType, codeChallenge, codeChallengeMethod
@@ -54,7 +55,8 @@ public class OAuthAuthorizationController {
                 .orElseThrow(() -> new IllegalStateException("Authenticated user not found: " + userId));
 
         AuthorizationCode authCode = oauthAuthorizationService.createAuthorizationCode(
-                user, client, redirectUri, codeChallenge, codeChallengeMethod
+                user, client, redirectUri, codeChallenge, codeChallengeMethod,
+                nonce, scope
         );
 
         String location = redirectUri

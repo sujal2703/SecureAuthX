@@ -44,6 +44,12 @@ public class AuthorizationCode {
     @Column(name = "challenge_method", nullable = false, length = 10)
     private String challengeMethod;
 
+    @Column(name = "nonce", length = 255)
+    private String nonce;
+
+    @Column(name = "scope", length = 1000)
+    private String scope;
+
     @Column(name = "expires_at", nullable = false)
     private OffsetDateTime expiresAt;
 
@@ -57,7 +63,8 @@ public class AuthorizationCode {
 
     public AuthorizationCode(
             String code, User user, OAuthClient client, String redirectUri,
-            String codeChallenge, String challengeMethod, OffsetDateTime expiresAt
+            String codeChallenge, String challengeMethod, OffsetDateTime expiresAt,
+            String nonce, String scope
     ) {
         this.code = code;
         this.user = user;
@@ -66,6 +73,8 @@ public class AuthorizationCode {
         this.codeChallenge = codeChallenge;
         this.challengeMethod = challengeMethod;
         this.expiresAt = expiresAt;
+        this.nonce = nonce;
+        this.scope = scope;
         this.consumed = false;
     }
 
@@ -79,6 +88,8 @@ public class AuthorizationCode {
     public String getRedirectUri() { return redirectUri; }
     public String getCodeChallenge() { return codeChallenge; }
     public String getChallengeMethod() { return challengeMethod; }
+    public String getNonce() { return nonce; }
+    public String getScope() { return scope; }
     public OffsetDateTime getExpiresAt() { return expiresAt; }
     public boolean isConsumed() { return consumed; }
     public OffsetDateTime getCreatedAt() { return createdAt; }

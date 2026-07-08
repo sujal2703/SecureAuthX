@@ -15,6 +15,7 @@ Feature modules live under `com.secureauthx.server` using feature-first package 
 - `common`: shared API error response and global exception handling.
 - `oauth`: OAuth 2.1 authorization server. Contains controller, service, repository, entities, DTOs, PKCE service, and OAuth-specific exceptions.
 - `passkey`: WebAuthn/FIDO2 passkey support. Contains controller, services (registration, authentication, passkey CRUD, challenge management, COSE key parsing), repository, entities, DTOs, and passkey-specific exceptions.
+- `oidc`: OpenID Connect 1.0 Provider. Contains controller (discovery, JWKS, UserInfo), service (ID Token generation, JWK serialization), and DTOs.
 - `config`: security, JWT authentication filter, and OpenAPI configuration.
 
 ## Runtime Components
@@ -95,6 +96,12 @@ Sprint 07 passkey endpoints:
 - `GET /api/v1/passkeys` — requires authentication (`@PreAuthorize("isAuthenticated()")`)
 - `DELETE /api/v1/passkeys/{id}` — requires authentication (`@PreAuthorize("isAuthenticated()")`)
 
+Sprint 08 OIDC endpoints:
+
+- `GET /.well-known/openid-configuration` — public
+- `GET /.well-known/jwks.json` — public
+- `GET /connect/userinfo` — public at HTTP layer; Bearer token validated in controller
+
 All other routes are denied by default until authorization flows are implemented in later sprints.
 
 ## Authorization Model
@@ -146,6 +153,20 @@ On every authenticated organization request, the `OrganizationService` loads the
 2. Server validates: client exists, is enabled, is confidential (has a client secret), and the secret matches the Argon2id hash.
 3. Server issues an RS256 JWT access token with a random UUID subject. No refresh token, no session is created.
 4. Client receives `{"access_token", "token_type": "Bearer", "expires_in"}` (no `refresh_token`).
+
+### OpenID Connect Flow
+
+1. **Authorization Request**: RP redirects the End-User to `GET /oauth/authorize` with `scope=openid` (plus optional `nonce`), along with the standard OAuth parameters (`client_id`, `redirect_uri`, `response_type=code`, `state`, `code_challenge`, `code_challenge_method=S256`).
+
+2. **Authorization Code Issuance**: Server validates the request (same as Sprint 06), includes `nonce` and `scope` in the stored authorization code record.
+
+3. **Token Exchange**: RP sends `POST /oauth/token` with the authorization code, PKCE verifier, and client credentials. Server validates as before.
+
+4. **ID Token Generation**: When the stored authorization code has `scope` containing `openid`, the server generates an RS256-signed ID Token with claims: `iss` (issuer URL), `sub` (user UUID), `aud` (client ID), `exp`, `iat`, `auth_time` (from authorization code creation), and `nonce` (if provided in the authorization request). The ID Token is returned in the token response as `id_token`.
+
+5. **UserInfo**: RP calls `GET /connect/userinfo` with the access token as a Bearer token. Server validates the token, looks up the user, and returns `sub` (user UUID) and `email`.
+
+6. **Key Discovery**: RP fetches `GET /.well-known/openid-configuration` for OP metadata, then `GET /.well-known/jwks.json` for the public RSA key to verify the ID Token signature.
 
 ### Passkey Authentication Flow
 

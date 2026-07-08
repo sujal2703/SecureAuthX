@@ -57,7 +57,7 @@ class AuthorizationCodeServiceTests {
         });
 
         AuthorizationCode authCode = authorizationCodeService.createAuthorizationCode(
-                user, client, redirectUri, codeChallenge, challengeMethod
+                user, client, redirectUri, codeChallenge, challengeMethod, null, null
         );
 
         assertThat(authCode.getCode()).isNotBlank();
@@ -73,7 +73,8 @@ class AuthorizationCodeServiceTests {
     void consumesValidAuthorizationCode() {
         AuthorizationCode authCode = new AuthorizationCode(
                 "test-code", user, client, redirectUri,
-                codeChallenge, challengeMethod, OffsetDateTime.now().plusMinutes(5)
+                codeChallenge, challengeMethod, OffsetDateTime.now().plusMinutes(5),
+                null, null
         );
         setField(authCode, "id", UUID.randomUUID());
 
@@ -91,7 +92,8 @@ class AuthorizationCodeServiceTests {
     void rejectsAlreadyConsumedCode() {
         AuthorizationCode authCode = new AuthorizationCode(
                 "used-code", user, client, redirectUri,
-                codeChallenge, challengeMethod, OffsetDateTime.now().plusMinutes(5)
+                codeChallenge, challengeMethod, OffsetDateTime.now().plusMinutes(5),
+                null, null
         );
         setField(authCode, "id", UUID.randomUUID());
         authCode.consume();
@@ -108,7 +110,8 @@ class AuthorizationCodeServiceTests {
     void rejectsExpiredCode() {
         AuthorizationCode authCode = new AuthorizationCode(
                 "expired-code", user, client, redirectUri,
-                codeChallenge, challengeMethod, OffsetDateTime.now().minusMinutes(1)
+                codeChallenge, challengeMethod, OffsetDateTime.now().minusMinutes(1),
+                null, null
         );
         setField(authCode, "id", UUID.randomUUID());
 
@@ -127,7 +130,8 @@ class AuthorizationCodeServiceTests {
 
         AuthorizationCode authCode = new AuthorizationCode(
                 "code", user, differentClient, redirectUri,
-                codeChallenge, challengeMethod, OffsetDateTime.now().plusMinutes(5)
+                codeChallenge, challengeMethod, OffsetDateTime.now().plusMinutes(5),
+                null, null
         );
         setField(authCode, "id", UUID.randomUUID());
 
@@ -143,7 +147,8 @@ class AuthorizationCodeServiceTests {
     void rejectsRedirectUriMismatch() {
         AuthorizationCode authCode = new AuthorizationCode(
                 "code", user, client, "https://original.com/callback",
-                codeChallenge, challengeMethod, OffsetDateTime.now().plusMinutes(5)
+                codeChallenge, challengeMethod, OffsetDateTime.now().plusMinutes(5),
+                null, null
         );
         setField(authCode, "id", UUID.randomUUID());
 

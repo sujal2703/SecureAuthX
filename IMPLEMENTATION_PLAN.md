@@ -123,3 +123,16 @@ Only the tasks in `.ai/12_CURRENT_SPRINT.md` are in scope.
 - JWT + refresh token issuance on passkey authentication.
 - 6 endpoints: register options, register verify, authenticate options, authenticate verify, list, delete.
 - All 136 tests pass.
+
+### Sprint 08 — OpenID Connect 1.0 (2026-07-08)
+
+- ID Token generation (RS256 signed JWT) when scope contains `openid`.
+- Nonce parameter stored in authorization code and included in ID Token.
+- UserInfo endpoint returning `sub` and `email` for Bearer token holders.
+- OpenID Connect Discovery document at `/.well-known/openid-configuration`.
+- JWKS endpoint at `/.well-known/jwks.json` exposing public RSA key only.
+- OAuth backward compatibility: without `openid` scope, no ID Token is issued.
+- Flyway V9: added `nonce` and `scope` columns to `oauth_authorization_codes`.
+- 3 new endpoints: discovery, jwks, userinfo.
+- 11 new tests: unit (3), integration (8).
+- All 147 tests pass.
