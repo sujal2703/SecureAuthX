@@ -191,3 +191,81 @@ export interface RegisterVerificationResponse {
   verified: boolean;
   credentialId: string;
 }
+
+// Admin Dashboard
+export interface DashboardResponse {
+  totalUsers: number;
+  totalOrganizations: number;
+  totalOAuthClients: number;
+  totalPasskeys: number;
+  totalSessions: number;
+  totalLoginEvents: number;
+  activeSessions: number;
+  securityIncidents: number;
+  developerProjects: number;
+}
+
+// Admin Audit Logs
+export interface AuditLogResponse {
+  id: string;
+  userId: string;
+  organizationId: string;
+  ipAddress: string;
+  action: string;
+  target: string;
+  success: boolean;
+  details: string;
+  createdAt: string;
+}
+
+// Admin Security Incidents
+export interface SecurityIncidentResponse {
+  id: string;
+  userId: string;
+  incidentType: string;
+  severity: string;
+  description: string;
+  ipAddress: string;
+  resolved: boolean;
+  resolvedBy: string | null;
+  resolvedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IncidentResolveRequest {
+  resolved: boolean;
+}
+
+// Admin Announcements
+export interface AnnouncementRequest {
+  title: string;
+  message: string;
+  severity?: string;
+  active?: boolean;
+}
+
+export interface AnnouncementResponse {
+  id: string;
+  title: string;
+  message: string;
+  severity: string;
+  active: boolean;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Admin System Settings
+export interface SystemSettingRequest {
+  settingValue: string;
+}
+
+export interface SystemSettingResponse {
+  id: string;
+  settingKey: string;
+  settingValue: string;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+}

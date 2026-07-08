@@ -51,6 +51,14 @@ describe("Sidebar Navigation", () => {
     expect(screen.getByText("Sessions")).toBeInTheDocument();
     expect(screen.getByText("Devices")).toBeInTheDocument();
     expect(screen.getByText("Settings")).toBeInTheDocument();
+    expect(screen.getByText("Admin Dashboard")).toBeInTheDocument();
+    expect(screen.getByText("Users")).toBeInTheDocument();
+    expect(screen.getByText("Organization Admin")).toBeInTheDocument();
+    expect(screen.getByText("Audit Logs")).toBeInTheDocument();
+    expect(screen.getByText("Security Incidents")).toBeInTheDocument();
+    expect(screen.getByText("Announcements")).toBeInTheDocument();
+    expect(screen.getByText("System Settings")).toBeInTheDocument();
+    expect(screen.getByText("Admin")).toBeInTheDocument();
   });
 
   it("renders the brand name", () => {

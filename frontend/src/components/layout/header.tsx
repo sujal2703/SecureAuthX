@@ -22,6 +22,13 @@ const pageTitles: Record<string, string> = {
   "/dashboard/passkeys/register": "Register Passkey",
   "/dashboard/security": "Security",
   "/dashboard/settings": "Settings",
+  "/dashboard/admin": "Admin Dashboard",
+  "/dashboard/admin/users": "User Management",
+  "/dashboard/admin/organizations": "Organization Admin",
+  "/dashboard/admin/audit-logs": "Audit Logs",
+  "/dashboard/admin/incidents": "Security Incidents",
+  "/dashboard/admin/announcements": "Announcements",
+  "/dashboard/admin/settings": "System Settings",
 };
 
 export function Header() {

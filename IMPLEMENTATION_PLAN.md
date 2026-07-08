@@ -201,3 +201,23 @@ Only the tasks in `.ai/12_CURRENT_SPRINT.md` are in scope.
 - 13 new frontend tests (passkeys: 5, security: 4, navigation: updated)
 - All 68 frontend tests pass
 - Backend unchanged (uses existing APIs only)
+
+### Sprint F7 — Frontend Enterprise Admin Portal (2026-07-08)
+
+- **Admin Dashboard** with 8 stat cards (Total Users, Active Sessions, Organizations, OAuth Clients, Passkeys, Developer Projects, Total Sessions, Security Incidents), platform health panel, system status section
+- **Audit Logs** page with search, action-type filter, pagination, success/failure indicators, IP address and timestamp display
+- **Security Incidents** list page with severity badges, resolved/open status, search, resolve action, pagination
+- **Incident Detail** page with overview, severity, status, user ID, IP address, resolve button, resolved-by info
+- **Announcements** CRUD page with inline create/edit form, severity selector, active toggle, delete confirmation
+- **System Settings** page with editable key-value pairs per setting, description display, individual save per setting
+- **User Management** placeholder page with info about backend availability and link to Audit Logs
+- **Organization Admin** placeholder page with info about backend availability and link to Organizations
+- All pages have loading skeleton, empty state, error state, toast notifications, admin access gate (403 handling)
+- Admin section in sidebar separated from user section by divider, with "Admin" heading
+- Updated header with page titles for all admin routes
+- Admin service methods: getDashboard, listAuditLogs, getAuditLog, listAnnouncements, createAnnouncement, updateAnnouncement, deleteAnnouncement, listIncidents, getIncident, resolveIncident, listSettings, updateSetting
+- Admin TypeScript DTO types: DashboardResponse, AuditLogResponse, SecurityIncidentResponse, IncidentResolveRequest, AnnouncementRequest, AnnouncementResponse, SystemSettingRequest, SystemSettingResponse
+- 22 new frontend tests (admin dashboard: 3, audit logs: 3, incidents: 3, incident detail: 2, announcements: 4, settings: 3, users: 1, organizations: 1, navigation: 2)
+- All 88 frontend tests pass
+- `npm run build` passes
+- Backend unchanged (uses existing admin APIs only)
