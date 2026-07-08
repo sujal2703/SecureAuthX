@@ -14,6 +14,7 @@ import com.secureauthx.server.organization.exception.OrganizationNotFoundExcepti
 import com.secureauthx.server.developer.exception.DeveloperProjectNotFoundException;
 import com.secureauthx.server.developer.exception.DeveloperApiKeyNotFoundException;
 import com.secureauthx.server.developer.exception.DeveloperAccessDeniedException;
+import com.secureauthx.server.admin.exception.ResourceNotFoundException;
 import com.secureauthx.server.passkey.exception.PasskeyNotFoundException;
 import com.secureauthx.server.passkey.exception.WebAuthnException;
 import com.secureauthx.server.sessions.exception.SessionNotFoundException;
@@ -204,6 +205,32 @@ public class GlobalExceptionHandler {
     ) {
         return buildResponse(
                 HttpStatus.FORBIDDEN,
+                exception.getMessage(),
+                request.getRequestURI(),
+                Map.of()
+        );
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    ResponseEntity<ApiErrorResponse> handleResourceNotFound(
+            ResourceNotFoundException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.NOT_FOUND,
+                exception.getMessage(),
+                request.getRequestURI(),
+                Map.of()
+        );
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    ResponseEntity<ApiErrorResponse> handleIllegalArgument(
+            IllegalArgumentException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.BAD_REQUEST,
                 exception.getMessage(),
                 request.getRequestURI(),
                 Map.of()

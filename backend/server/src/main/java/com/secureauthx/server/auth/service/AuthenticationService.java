@@ -4,6 +4,8 @@ import com.secureauthx.server.auth.dto.LoginRequest;
 import com.secureauthx.server.auth.dto.RefreshTokenRequest;
 import com.secureauthx.server.auth.dto.TokenResponse;
 import com.secureauthx.server.auth.entity.RefreshToken;
+import com.secureauthx.server.admin.service.AuditService;
+import com.secureauthx.server.admin.service.IncidentService;
 import com.secureauthx.server.auth.entity.User;
 import com.secureauthx.server.auth.exception.InvalidCredentialsException;
 import com.secureauthx.server.auth.exception.InvalidTokenException;
@@ -13,13 +15,13 @@ import com.secureauthx.server.auth.repository.UserRepository;
 import com.secureauthx.server.sessions.entity.Session;
 import com.secureauthx.server.sessions.service.SessionService;
 import java.security.MessageDigest;
-import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.OffsetDateTime;
 import java.util.HexFormat;
 import java.util.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -36,6 +38,12 @@ public class AuthenticationService {
     private final JwtService jwtService;
     private final SessionService sessionService;
     private final long refreshTokenExpirationDays;
+
+    @Autowired(required = false)
+    private AuditService auditService;
+
+    @Autowired(required = false)
+    private IncidentService incidentService;
 
     public AuthenticationService(
             UserRepository userRepository,
@@ -60,6 +68,13 @@ public class AuthenticationService {
                 .orElseThrow(InvalidCredentialsException::new);
 
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+            if (auditService != null) {
+                auditService.record(user.getId(), null, "LOGIN_FAILED", user.getEmail(), false, "Invalid password");
+            }
+            if (incidentService != null) {
+                incidentService.recordIncident(user.getId(), "MULTIPLE_FAILED_LOGINS", "MEDIUM",
+                        "Failed login attempt for " + user.getEmail(), ipAddress);
+            }
             throw new InvalidCredentialsException();
         }
 
@@ -74,6 +89,10 @@ public class AuthenticationService {
         String accessToken = jwtService.createAccessToken(user.getId(), user.getEmail(), session.getId());
 
         LOGGER.info("User login successful for user_id={}", user.getId());
+
+        if (auditService != null) {
+            auditService.record(user.getId(), null, "LOGIN", user.getEmail(), true, null);
+        }
 
         return new TokenResponse(
                 accessToken,
@@ -131,6 +150,9 @@ public class AuthenticationService {
             storedToken.revoke();
             refreshTokenRepository.save(storedToken);
             LOGGER.info("Logout successful for user_id={}", storedToken.getUser().getId());
+            if (auditService != null) {
+                auditService.record(storedToken.getUser().getId(), null, "LOGOUT", storedToken.getUser().getEmail(), true, null);
+            }
         });
     }
 

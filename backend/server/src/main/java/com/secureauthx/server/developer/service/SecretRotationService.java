@@ -1,5 +1,6 @@
 package com.secureauthx.server.developer.service;
 
+import com.secureauthx.server.admin.service.AuditService;
 import com.secureauthx.server.developer.dto.RotateSecretResponse;
 import com.secureauthx.server.developer.entity.DeveloperProject;
 import com.secureauthx.server.developer.exception.DeveloperProjectNotFoundException;
@@ -12,6 +13,7 @@ import java.util.Base64;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +24,9 @@ public class SecretRotationService {
     private static final Logger LOGGER = LoggerFactory.getLogger(SecretRotationService.class);
     private static final int SECRET_BYTES = 32;
     private static final SecureRandom RANDOM = new SecureRandom();
+
+    @Autowired(required = false)
+    private AuditService auditService;
 
     private final DeveloperProjectRepository projectRepository;
     private final OAuthClientRepository oauthClientRepository;
@@ -58,6 +63,10 @@ public class SecretRotationService {
         oauthClientRepository.save(client);
 
         LOGGER.info("OAuth client secret rotated clientId={} projectId={}", client.getClientId(), projectId);
+
+        if (auditService != null) {
+            auditService.record(userId, null, "SECRET_ROTATION", client.getClientId(), true, null);
+        }
 
         return new RotateSecretResponse(
                 projectId,

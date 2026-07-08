@@ -12,4 +12,5 @@ public interface SessionRepository extends JpaRepository<Session, UUID> {
             UUID userId, java.time.OffsetDateTime now);
 
     Optional<Session> findByIdAndUserId(UUID id, UUID userId);
+    long countByRevokedAtIsNull();
 }

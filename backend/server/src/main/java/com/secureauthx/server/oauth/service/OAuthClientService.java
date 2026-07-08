@@ -1,5 +1,6 @@
 package com.secureauthx.server.oauth.service;
 
+import com.secureauthx.server.admin.service.AuditService;
 import com.secureauthx.server.oauth.dto.ClientResponse;
 import com.secureauthx.server.oauth.dto.CreateClientRequest;
 import com.secureauthx.server.oauth.dto.CreateClientResponse;
@@ -12,6 +13,7 @@ import java.util.List;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class OAuthClientService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(OAuthClientService.class);
+
+    @Autowired(required = false)
+    private AuditService auditService;
 
     private final OAuthClientRepository oauthClientRepository;
     private final OAuthClientRedirectUriRepository redirectUriRepository;
@@ -64,6 +69,10 @@ public class OAuthClientService {
         redirectUriRepository.saveAll(redirectUris);
 
         LOGGER.info("OAuth client created client_id={} id={}", saved.getClientId(), saved.getId());
+
+        if (auditService != null) {
+            auditService.record(null, null, "OAUTH_CLIENT_CREATED", saved.getClientId(), true, null);
+        }
 
         return new CreateClientResponse(
                 saved.getId(),

@@ -2,7 +2,7 @@
 
 ## Current API Stage
 
-Sprint 10 adds the Developer Portal. Developers can now create projects, manage API keys, rotate OAuth client secrets, view usage analytics, and configure rate limits through a self-service REST API.
+Sprint 11 adds the Admin Portal. Administrators can now view a platform dashboard, browse audit logs, manage system announcements, configure system settings, and track/resolve security incidents.
 
 ## Public Foundation Endpoints
 
@@ -1260,6 +1260,350 @@ Success response: `204 No Content`
 Error responses:
 - `401 Unauthorized` when the access token is missing, expired, or invalid.
 - `404 Not Found` when the project does not exist or belongs to another user.
+
+## Admin Portal Endpoints
+
+All admin portal endpoints require a valid Bearer JWT access token in the `Authorization` header. The authenticated user must have `ROLE_ADMIN` (enforced via `@PreAuthorize("hasRole('ADMIN')")` and `SecurityConfig`).
+
+### Dashboard
+
+#### `GET /api/v1/admin/dashboard`
+
+Returns aggregate platform metrics for the administrator dashboard.
+
+Success response: `200 OK`
+
+```json
+{
+  "totalUsers": 42,
+  "totalSessions": 156,
+  "activeSessions": 89,
+  "totalApps": 12,
+  "pendingIncidents": 3,
+  "recentRegistrations": 5,
+  "recentLogins": 28,
+  "recentAuditActions": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "userId": "660e8400-e29b-41d4-a716-446655440001",
+      "userEmail": "admin@example.com",
+      "action": "USER_LOGIN",
+      "details": "User logged in from IP 192.168.1.100",
+      "ipAddress": "192.168.1.100",
+      "createdAt": "2026-07-08T10:00:00Z"
+    }
+  ]
+}
+```
+
+Error responses:
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+- `403 Forbidden` when the user does not have `ROLE_ADMIN`.
+
+### Audit Logs
+
+#### `GET /api/v1/admin/audit`
+
+Lists audit log entries with pagination and optional filtering.
+
+Query parameters:
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `page` | No | Page number (0-based, default: 0) |
+| `size` | No | Page size (default: 20, max: 100) |
+| `userId` | No | Filter by user UUID |
+| `action` | No | Filter by action type string |
+
+Success response: `200 OK`
+
+```json
+{
+  "content": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "userId": "660e8400-e29b-41d4-a716-446655440001",
+      "userEmail": "admin@example.com",
+      "action": "USER_LOGIN",
+      "details": "User logged in from IP 192.168.1.100",
+      "ipAddress": "192.168.1.100",
+      "createdAt": "2026-07-08T10:00:00Z"
+    }
+  ],
+  "page": 0,
+  "size": 20,
+  "totalElements": 1,
+  "totalPages": 1
+}
+```
+
+Error responses:
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+- `403 Forbidden` when the user does not have `ROLE_ADMIN`.
+
+#### `GET /api/v1/admin/audit/{id}`
+
+Returns a single audit log entry by UUID.
+
+Success response: `200 OK` (single `AuditLogResponse`)
+
+Error responses:
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+- `403 Forbidden` when the user does not have `ROLE_ADMIN`.
+- `404 Not Found` when the audit log entry does not exist.
+
+### System Announcements
+
+#### `POST /api/v1/admin/announcements`
+
+Creates a new system-wide announcement. The announcement is immediately visible.
+
+Request:
+
+```json
+{
+  "title": "Scheduled Maintenance",
+  "content": "The platform will be down for maintenance on July 15th.",
+  "severity": "INFO",
+  "active": true,
+  "expiresAt": "2026-07-15T10:00:00Z"
+}
+```
+
+Validation:
+- `title` is required and must be 255 characters or fewer.
+- `content` is required.
+- `severity` is required, one of `INFO`, `WARNING`, `CRITICAL`.
+- `active` defaults to `true`.
+- `expiresAt` is optional; if not set, the announcement does not expire.
+
+Success response: `201 Created`
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "title": "Scheduled Maintenance",
+  "content": "The platform will be down for maintenance on July 15th.",
+  "severity": "INFO",
+  "active": true,
+  "createdBy": "660e8400-e29b-41d4-a716-446655440001",
+  "expiresAt": "2026-07-15T10:00:00Z",
+  "createdAt": "2026-07-08T10:00:00Z",
+  "updatedAt": "2026-07-08T10:00:00Z"
+}
+```
+
+Error responses:
+- `400 Bad Request` for validation failures.
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+- `403 Forbidden` when the user does not have `ROLE_ADMIN`.
+
+#### `GET /api/v1/admin/announcements`
+
+Lists all announcements. Supports an optional query parameter `active=true` to filter only active (non-expired) announcements.
+
+Query parameters:
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `active` | No | If `true`, returns only active, non-expired announcements |
+
+Success response: `200 OK`
+
+```json
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "title": "Scheduled Maintenance",
+    "content": "The platform will be down for maintenance on July 15th.",
+    "severity": "INFO",
+    "active": true,
+    "createdBy": "660e8400-e29b-41d4-a716-446655440001",
+    "expiresAt": "2026-07-15T10:00:00Z",
+    "createdAt": "2026-07-08T10:00:00Z",
+    "updatedAt": "2026-07-08T10:00:00Z"
+  }
+]
+```
+
+Error responses:
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+- `403 Forbidden` when the user does not have `ROLE_ADMIN`.
+
+#### `GET /api/v1/admin/announcements/{id}`
+
+Returns a single announcement by UUID.
+
+Success response: `200 OK` (single `AnnouncementResponse`)
+
+Error responses:
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+- `403 Forbidden` when the user does not have `ROLE_ADMIN`.
+- `404 Not Found` when the announcement does not exist.
+
+#### `PUT /api/v1/admin/announcements/{id}`
+
+Updates an existing announcement.
+
+Request: same schema as create (all fields optional for partial update)
+
+Success response: `200 OK` (updated `AnnouncementResponse`)
+
+Error responses:
+- `400 Bad Request` for validation failures.
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+- `403 Forbidden` when the user does not have `ROLE_ADMIN`.
+- `404 Not Found` when the announcement does not exist.
+
+#### `DELETE /api/v1/admin/announcements/{id}`
+
+Deletes an announcement.
+
+Success response: `204 No Content`
+
+Error responses:
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+- `403 Forbidden` when the user does not have `ROLE_ADMIN`.
+- `404 Not Found` when the announcement does not exist.
+
+### System Settings
+
+#### `GET /api/v1/admin/settings`
+
+Lists all system settings as key-value pairs.
+
+Success response: `200 OK`
+
+```json
+[
+  {
+    "key": "platform.maintenance_mode",
+    "value": "false",
+    "description": "Enable maintenance mode",
+    "updatedAt": "2026-07-08T10:00:00Z"
+  }
+]
+```
+
+Error responses:
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+- `403 Forbidden` when the user does not have `ROLE_ADMIN`.
+
+#### `GET /api/v1/admin/settings/{key}`
+
+Returns a single system setting by key.
+
+Success response: `200 OK` (single `SystemSettingResponse`)
+
+Error responses:
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+- `403 Forbidden` when the user does not have `ROLE_ADMIN`.
+- `404 Not Found` when the setting does not exist.
+
+#### `PUT /api/v1/admin/settings/{key}`
+
+Updates a system setting value.
+
+Request:
+
+```json
+{
+  "value": "true"
+}
+```
+
+Success response: `200 OK` (updated `SystemSettingResponse`)
+
+Error responses:
+- `400 Bad Request` when value is empty.
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+- `403 Forbidden` when the user does not have `ROLE_ADMIN`.
+- `404 Not Found` when the setting does not exist.
+
+### Security Incidents
+
+#### `GET /api/v1/admin/incidents`
+
+Lists security incidents with pagination and optional filtering by resolution status.
+
+Query parameters:
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| `page` | No | Page number (0-based, default: 0) |
+| `size` | No | Page size (default: 20, max: 100) |
+| `resolved` | No | If `true`, returns only resolved incidents; if `false`, returns only unresolved |
+
+Success response: `200 OK`
+
+```json
+{
+  "content": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "userId": "660e8400-e29b-41d4-a716-446655440001",
+      "userEmail": "user@example.com",
+      "incidentType": "BRUTE_FORCE",
+      "severity": "HIGH",
+      "details": "Multiple failed login attempts from IP 192.168.1.100",
+      "ipAddress": "192.168.1.100",
+      "resolved": false,
+      "resolvedAt": null,
+      "resolvedBy": null,
+      "resolution": null,
+      "createdAt": "2026-07-08T10:00:00Z"
+    }
+  ],
+  "page": 0,
+  "size": 20,
+  "totalElements": 1,
+  "totalPages": 1
+}
+```
+
+Error responses:
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+- `403 Forbidden` when the user does not have `ROLE_ADMIN`.
+
+#### `GET /api/v1/admin/incidents/{id}`
+
+Returns a single security incident by UUID.
+
+Success response: `200 OK` (single `SecurityIncidentResponse`)
+
+Error responses:
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+- `403 Forbidden` when the user does not have `ROLE_ADMIN`.
+- `404 Not Found` when the incident does not exist.
+
+#### `PUT /api/v1/admin/incidents/{id}/resolve`
+
+Marks a security incident as resolved with an optional resolution note.
+
+Request:
+
+```json
+{
+  "resolution": "Investigated and blocked offending IP address."
+}
+```
+
+Validation:
+- `resolution` is optional.
+
+Success response: `200 OK`
+
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "resolved": true,
+  "resolvedAt": "2026-07-08T12:00:00Z",
+  "resolvedBy": "660e8400-e29b-41d4-a716-446655440002",
+  "resolution": "Investigated and blocked offending IP address."
+}
+```
+
+Error responses:
+- `401 Unauthorized` when the access token is missing, expired, or invalid.
+- `403 Forbidden` when the user does not have `ROLE_ADMIN`.
+- `404 Not Found` when the incident does not exist.
 
 ## Authorization
 

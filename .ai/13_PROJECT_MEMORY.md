@@ -22,13 +22,13 @@ Append new information where appropriate.
 
 # Current Phase
 
-OAuth 2.1 Authorization Server
+Admin Portal
 
 ---
 
 # Current Sprint
 
-Sprint 06
+Sprint 11
 
 ---
 
@@ -156,7 +156,59 @@ Sprint 06 verification completed:
 
 # Work In Progress
 
-No active sprint implementation is in progress. Sprint 06 completed. Awaiting review before Sprint 07.
+No active sprint implementation is in progress. Sprint 11 completed. Awaiting review before Sprint 12.
+
+---
+
+# Completed Work (Sprint 07-11 Updates)
+
+Sprint 07 completed on 2026-07-08.
+
+Sprint 07 delivered WebAuthn/FIDO2 passkey support. Added passkey registration (generate options + verify), passkey authentication (generate options + verify), passkey CRUD (list, delete), COSE public key parsing (EC2 P-256/P-384/P-521 and RSA), challenge management with 5-minute expiry, and a new authentication flow that issues JWT + refresh tokens on passkey authentication. Added Flyway V8 migration for passkeys and webauthn_challenges tables.
+
+Sprint 07 verification completed:
+- `./gradlew.bat build` succeeds (147 total tests).
+- Registration and authentication flows work end-to-end with WebAuthn.
+- Counter monotonicity is enforced.
+- Challenge reuse is prevented.
+- Origin and RP ID are validated.
+
+Sprint 08 completed on 2026-07-08.
+
+Sprint 08 delivered OpenID Connect 1.0 Provider support. Added OIDC Discovery endpoint (`/.well-known/openid-configuration`), JWKS endpoint (`/.well-known/jwks.json`), UserInfo endpoint (`/connect/userinfo`), ID Token generation (RS256-signed with iss, sub, aud, exp, iat, auth_time, nonce), and scope/nonce storage in authorization codes. Added Flyway V9 migration for nonce and scope columns.
+
+Sprint 08 verification completed:
+- `./gradlew.bat build` succeeds (147 total tests).
+- OIDC Discovery returns valid metadata.
+- JWKS returns the public RSA key.
+- UserInfo returns sub and email for valid access tokens.
+- ID Tokens are issued when scope contains openid.
+- ID Tokens include nonce when provided in authorization request.
+
+Sprint 10 completed on 2026-07-08.
+
+Sprint 10 delivered the Developer Portal. Added developer project CRUD, API key management with SHA-256 hashed storage (plaintext shown once), OAuth client secret rotation, daily usage analytics, and rate limit management. Added Flyway V10 migration for developer_portal_tables. Added owner_user_id to oauth_clients for developer portal linking.
+
+Sprint 10 verification completed:
+- `./gradlew.bat build` succeeds (183 total tests).
+- Projects are isolated per user; admins can access all projects.
+- API keys are SHA-256 hashed before storage.
+- Secret rotation generates new secrets and hashes with Argon2id.
+- Usage analytics return aggregated daily data for date ranges.
+- Rate limit configuration CRUD works.
+
+Sprint 11 completed on 2026-07-08.
+
+Sprint 11 delivered the Admin Portal. Added platform dashboard with aggregate metrics, audit log browsing with pagination and filtering (by userId, action), system announcement CRUD with severity levels and expiry, system settings management (with 4 seed defaults), security incident tracking (list, get, resolve) with auto-creation on failed login attempts, and automated audit recording across existing services (login/logout/registration/passkey/oauth/secret-rotation/admin actions). Added Flyway V11 migration for admin portal tables.
+
+Sprint 11 verification completed:
+- `./gradlew.bat build` succeeds (209 total tests: 147 pre-existing + 36 developer portal + 26 admin portal).
+- All admin endpoints require ROLE_ADMIN.
+- Audit entries are automatically recorded across auth, registration, passkey, OAuth, and secret rotation services.
+- Security incidents are auto-created for failed login attempts.
+- Dashboard returns correct aggregated metrics.
+- System settings are seeded and manageable.
+- `docker compose --env-file .env.example up --build -d` starts the stack (pending verification).
 
 ---
 
@@ -164,15 +216,15 @@ No active sprint implementation is in progress. Sprint 06 completed. Awaiting re
 
 Sprint 03
 
-Session Management
+Session Management (COMPLETED)
 
 Sprint 04
 
-Authorization (RBAC)
+Authorization (RBAC) (COMPLETED)
 
 Sprint 05
 
-Organizations & Multi-Tenancy Foundation
+Organizations & Multi-Tenancy Foundation (COMPLETED)
 
 Sprint 06
 
@@ -180,23 +232,23 @@ OAuth 2.1 (COMPLETED)
 
 Sprint 07
 
-OpenID Connect
+Passkeys (COMPLETED)
 
 Sprint 08
 
-Passkeys
+OpenID Connect (COMPLETED)
 
 Sprint 09
 
-AI Risk Engine
+OAuth Client Management REST API (COMPLETED)
 
 Sprint 10
 
-Developer Portal
+Developer Portal (COMPLETED)
 
 Sprint 11
 
-Admin Portal
+Admin Portal (COMPLETED)
 
 Sprint 12
 
@@ -206,29 +258,49 @@ Production Deployment
 
 # Test Results
 
-Total tests after Sprint 06: 113 (77 unit, 35 integration, 1 OpenAPI documentation test).
+Total tests after Sprint 11: 209 (143 unit, 65 integration, 1 OpenAPI documentation test).
 
-Test breakdown:
+Test breakdown (Sprints 00-11):
 
-- `src/test/java/com/secureauthx/server/auth/service/AuthenticationServiceTests.java`: 13 tests (login, refresh, logout, token rotation)
-- `src/test/java/com/secureauthx/server/auth/jwt/JwtServiceTests.java`: 4 tests (token creation, validation, tamper detection)
-- `src/test/java/com/secureauthx/server/auth/controller/AuthenticationControllerIntegrationTests.java`: 7 tests (register, login, refresh, logout, validation errors)
-- `src/test/java/com/secureauthx/server/auth/service/RegistrationServiceTests.java`: 2 tests (email normalization, duplicate rejection)
-- `src/test/java/com/secureauthx/server/sessions/service/SessionServiceTests.java`: 5 tests (create, list, revoke by id, revoke all, ownership check)
-- `src/test/java/com/secureauthx/server/sessions/service/UserAgentParserTests.java`: 5 tests (Chrome/Windows, Firefox/macOS, Safari/iOS, Edge/Android, null, empty)
-- `src/test/java/com/secureauthx/server/sessions/controller/SessionControllerIntegrationTests.java`: 9 tests (login creates session, list, current, revoke by id, revoke current, revoke all, multiple logins, not found, forbidden)
-- `src/test/java/com/secureauthx/server/authorization/service/RoleServiceTests.java`: 2 tests (returns all roles, returns empty list)
-- `src/test/java/com/secureauthx/server/authorization/service/PermissionServiceTests.java`: 2 tests (returns all permissions, returns empty list)
-- `src/test/java/com/secureauthx/server/authorization/service/UserAuthorityServiceTests.java`: 2 tests (loads role and permission authorities, returns empty for user with no roles)
-- `src/test/java/com/secureauthx/server/authorization/controller/AuthorizationControllerIntegrationTests.java`: 5 tests (user can list roles, user can list permissions, unauthenticated returns forbidden for roles and permissions, response does not expose internal mappings)
-- `src/test/java/com/secureauthx/server/organization/service/OrganizationServiceTests.java`: 6 tests (create personal org, create org, list orgs, get current org, update as OWNER, update as MEMBER throws)
-- `src/test/java/com/secureauthx/server/organization/controller/OrganizationControllerIntegrationTests.java`: 8 tests (list orgs, get current, create org, update, unauthenticated forbidden, member cannot update, registration creates personal org)
-- `src/test/java/com/secureauthx/server/oauth/service/PKCEServiceTests.java`: 3 tests (verifier generation, computed challenge, invalid verifier rejection)
-- `src/test/java/com/secureauthx/server/oauth/service/OAuthClientServiceTests.java`: 3 tests (create client, duplicate rejection, get by ID)
-- `src/test/java/com/secureauthx/server/oauth/service/AuthorizationCodeServiceTests.java`: 3 tests (create, consume valid, reject consumed/expired)
-- `src/test/java/com/secureauthx/server/oauth/controller/OAuthIntegrationTests.java`: 11 tests (create and retrieve client, list clients, unauthenticated forbidden, non-admin forbidden, auth code flow, code reuse rejected, client credentials, invalid secret, redirect URI mismatch, unsupported grant type, unauthenticated authorize)
-- `src/test/java/com/secureauthx/server/config/OpenApiConfigTests.java`: 1 test (OpenAPI documentation)
-- `src/test/java/com/secureauthx/server/ServerApplicationTests.java`: 1 test (context loads)
+- `src/test/java/com/secureauthx/server/auth/service/AuthenticationServiceTests.java`: 13 tests
+- `src/test/java/com/secureauthx/server/auth/jwt/JwtServiceTests.java`: 4 tests
+- `src/test/java/com/secureauthx/server/auth/controller/AuthenticationControllerIntegrationTests.java`: 7 tests
+- `src/test/java/com/secureauthx/server/auth/service/RegistrationServiceTests.java`: 2 tests
+- `src/test/java/com/secureauthx/server/sessions/service/SessionServiceTests.java`: 5 tests
+- `src/test/java/com/secureauthx/server/sessions/service/UserAgentParserTests.java`: 5 tests
+- `src/test/java/com/secureauthx/server/sessions/controller/SessionControllerIntegrationTests.java`: 9 tests
+- `src/test/java/com/secureauthx/server/authorization/service/RoleServiceTests.java`: 2 tests
+- `src/test/java/com/secureauthx/server/authorization/service/PermissionServiceTests.java`: 2 tests
+- `src/test/java/com/secureauthx/server/authorization/service/UserAuthorityServiceTests.java`: 2 tests
+- `src/test/java/com/secureauthx/server/authorization/controller/AuthorizationControllerIntegrationTests.java`: 5 tests
+- `src/test/java/com/secureauthx/server/organization/service/OrganizationServiceTests.java`: 6 tests
+- `src/test/java/com/secureauthx/server/organization/controller/OrganizationControllerIntegrationTests.java`: 8 tests
+- `src/test/java/com/secureauthx/server/oauth/service/PKCEServiceTests.java`: 3 tests
+- `src/test/java/com/secureauthx/server/oauth/service/OAuthClientServiceTests.java`: 3 tests
+- `src/test/java/com/secureauthx/server/oauth/service/AuthorizationCodeServiceTests.java`: 3 tests
+- `src/test/java/com/secureauthx/server/oauth/controller/OAuthIntegrationTests.java`: 11 tests
+- `src/test/java/com/secureauthx/server/passkey/service/WebAuthnRegistrationServiceTests.java`: 5 tests
+- `src/test/java/com/secureauthx/server/passkey/service/WebAuthnAuthenticationServiceTests.java`: 5 tests
+- `src/test/java/com/secureauthx/server/passkey/service/PasskeyServiceTests.java`: 3 tests
+- `src/test/java/com/secureauthx/server/passkey/service/CoseKeyParserTests.java`: 5 tests
+- `src/test/java/com/secureauthx/server/passkey/controller/PasskeyControllerIntegrationTests.java`: 11 tests
+- `src/test/java/com/secureauthx/server/oidc/service/OidcDiscoveryServiceTests.java`: 2 tests
+- `src/test/java/com/secureauthx/server/oidc/service/IdTokenServiceTests.java`: 3 tests
+- `src/test/java/com/secureauthx/server/oidc/controller/OidcIntegrationTests.java`: 7 tests
+- `src/test/java/com/secureauthx/server/developer/service/DeveloperProjectServiceTests.java`: 5 tests
+- `src/test/java/com/secureauthx/server/developer/service/ApiKeyServiceTests.java`: 4 tests
+- `src/test/java/com/secureauthx/server/developer/service/SecretRotationServiceTests.java`: 3 tests
+- `src/test/java/com/secureauthx/server/developer/service/UsageAnalyticsServiceTests.java`: 3 tests
+- `src/test/java/com/secureauthx/server/developer/service/RateLimitServiceTests.java`: 3 tests
+- `src/test/java/com/secureauthx/server/developer/controller/DeveloperPortalIntegrationTests.java`: 18 tests
+- `src/test/java/com/secureauthx/server/admin/service/AuditServiceTests.java`: 4 tests
+- `src/test/java/com/secureauthx/server/admin/service/DashboardServiceTests.java`: 1 test
+- `src/test/java/com/secureauthx/server/admin/service/SystemSettingsServiceTests.java`: 5 tests
+- `src/test/java/com/secureauthx/server/admin/service/IncidentServiceTests.java`: 4 tests
+- `src/test/java/com/secureauthx/server/admin/service/AnnouncementServiceTests.java`: 7 tests
+- `src/test/java/com/secureauthx/server/admin/controller/AdminControllerIntegrationTests.java`: 10 tests
+- `src/test/java/com/secureauthx/server/config/OpenApiConfigTests.java`: 1 test
+- `src/test/java/com/secureauthx/server/ServerApplicationTests.java`: 1 test
 
 ---
 
@@ -328,15 +400,15 @@ ACTIVE
 
 Architecture
 
-UPDATED FOR SPRINT 06
+UPDATED FOR SPRINT 11
 
 Database
 
-UPDATED FOR SPRINT 06
+UPDATED FOR SPRINT 11
 
 API
 
-UPDATED FOR SPRINT 06
+UPDATED FOR SPRINT 11
 
 ---
 

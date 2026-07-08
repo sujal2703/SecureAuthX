@@ -1,5 +1,6 @@
 package com.secureauthx.server.passkey.service;
 
+import com.secureauthx.server.admin.service.AuditService;
 import com.secureauthx.server.auth.entity.User;
 import com.secureauthx.server.passkey.dto.RegisterOptionsResponse;
 import com.secureauthx.server.passkey.dto.RegisterVerificationRequest;
@@ -12,6 +13,7 @@ import java.security.MessageDigest;
 import java.util.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +22,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class WebAuthnRegistrationService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WebAuthnRegistrationService.class);
+
+    @Autowired(required = false)
+    private AuditService auditService;
 
     private final ChallengeService challengeService;
     private final PasskeyService passkeyService;
@@ -103,6 +108,10 @@ public class WebAuthnRegistrationService {
         passkeyService.savePasskey(passkey);
 
         LOGGER.info("Passkey registered for user_id={} credential_id={}", user.getId(), credentialId);
+
+        if (auditService != null) {
+            auditService.record(user.getId(), null, "PASSKEY_REGISTRATION", credentialId, true, null);
+        }
 
         return new RegisterVerificationResponse(passkey.getId(), true, credentialId);
     }

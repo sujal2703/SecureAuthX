@@ -17,6 +17,7 @@ Feature modules live under `com.secureauthx.server` using feature-first package 
 - `passkey`: WebAuthn/FIDO2 passkey support. Contains controller, services (registration, authentication, passkey CRUD, challenge management, COSE key parsing), repository, entities, DTOs, and passkey-specific exceptions.
 - `oidc`: OpenID Connect 1.0 Provider. Contains controller (discovery, JWKS, UserInfo), service (ID Token generation, JWK serialization), and DTOs.
 - `developer`: Developer Portal. Contains controller, services (project management, API key management, secret rotation, usage analytics, rate limit management), repository, entities, DTOs, and developer-specific exceptions.
+- `admin`: Admin Portal. Contains controller, services (audit, dashboard, announcements, system settings, incidents), repository, entities, DTOs, and admin-specific exceptions.
 - `config`: security, JWT authentication filter, and OpenAPI configuration.
 
 ## Runtime Components
@@ -102,6 +103,23 @@ Sprint 08 OIDC endpoints:
 - `GET /.well-known/openid-configuration` — public
 - `GET /.well-known/jwks.json` — public
 - `GET /connect/userinfo` — public at HTTP layer; Bearer token validated in controller
+
+Sprint 11 Admin Portal endpoints require `ROLE_ADMIN` and a valid Bearer JWT access token:
+
+- `GET /api/v1/admin/dashboard`
+- `GET /api/v1/admin/audit`
+- `GET /api/v1/admin/audit/{id}`
+- `POST /api/v1/admin/announcements`
+- `GET /api/v1/admin/announcements`
+- `GET /api/v1/admin/announcements/{id}`
+- `PUT /api/v1/admin/announcements/{id}`
+- `DELETE /api/v1/admin/announcements/{id}`
+- `GET /api/v1/admin/settings`
+- `GET /api/v1/admin/settings/{key}`
+- `PUT /api/v1/admin/settings/{key}`
+- `GET /api/v1/admin/incidents`
+- `GET /api/v1/admin/incidents/{id}`
+- `PUT /api/v1/admin/incidents/{id}/resolve`
 
 Sprint 10 Developer Portal endpoints require a valid Bearer JWT access token:
 

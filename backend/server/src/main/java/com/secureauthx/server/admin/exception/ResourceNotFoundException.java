@@ -1,0 +1,7 @@
+package com.secureauthx.server.admin.exception;
+
+public class ResourceNotFoundException extends RuntimeException {
+    public ResourceNotFoundException(String message) {
+        super(message);
+    }
+}

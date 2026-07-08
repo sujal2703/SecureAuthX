@@ -255,6 +255,75 @@ Constraints and indexes:
 - `idx_developer_api_usage_project_id` index for project-based usage queries.
 - `idx_api_rate_limits_project_id` index for project-based rate limit queries.
 
+### `V11__Create_admin_portal_tables.sql`
+
+Creates four tables for Sprint 11 Admin Portal support.
+
+Tables:
+
+- `audit_logs` — audit trail of security and administrative actions.
+- `system_announcements` — system-wide announcements with severity and expiry.
+- `system_settings` — key-value runtime configuration store.
+- `security_incidents` — security incident tracking with resolution workflow.
+
+Columns for `audit_logs`:
+
+- `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+- `user_id UUID REFERENCES users(id) ON DELETE SET NULL`
+- `user_email VARCHAR(320)`
+- `action VARCHAR(100) NOT NULL`
+- `details TEXT`
+- `ip_address VARCHAR(45)`
+- `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`
+
+Columns for `system_announcements`:
+
+- `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+- `title VARCHAR(255) NOT NULL`
+- `content TEXT NOT NULL`
+- `severity VARCHAR(20) NOT NULL DEFAULT 'INFO'`
+- `active BOOLEAN NOT NULL DEFAULT true`
+- `created_by UUID REFERENCES users(id) ON DELETE SET NULL`
+- `expires_at TIMESTAMPTZ`
+- `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`
+- `updated_at TIMESTAMPTZ NOT NULL DEFAULT now()`
+
+Columns for `system_settings`:
+
+- `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+- `key VARCHAR(255) NOT NULL UNIQUE`
+- `value TEXT NOT NULL`
+- `description VARCHAR(500)`
+- `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`
+- `updated_at TIMESTAMPTZ NOT NULL DEFAULT now()`
+
+Columns for `security_incidents`:
+
+- `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`
+- `user_id UUID REFERENCES users(id) ON DELETE SET NULL`
+- `user_email VARCHAR(320)`
+- `incident_type VARCHAR(100) NOT NULL`
+- `severity VARCHAR(20) NOT NULL DEFAULT 'MEDIUM'`
+- `details TEXT`
+- `ip_address VARCHAR(45)`
+- `resolved BOOLEAN NOT NULL DEFAULT false`
+- `resolved_at TIMESTAMPTZ`
+- `resolved_by UUID REFERENCES users(id) ON DELETE SET NULL`
+- `resolution TEXT`
+- `created_at TIMESTAMPTZ NOT NULL DEFAULT now()`
+
+Constraints and indexes:
+
+- `idx_audit_logs_user_id` index for user-based audit queries.
+- `idx_audit_logs_action` index for action-based audit queries.
+- `idx_audit_logs_created_at` index for time-based audit queries.
+- `idx_security_incidents_user_id` index for user-based incident queries.
+- `idx_system_settings_key` unique index on setting key.
+
+Seed data:
+
+- Default settings: `platform.maintenance_mode` (false), `security.max_login_attempts` (5), `security.session_timeout_minutes` (60), `platform.maintenance_message` ("System is under maintenance. Please try again later.").
+
 ### `V6__Create_organizations_tables.sql`
 
 Creates the organizations and organization_members tables for Sprint 05 multi-tenancy foundation.

@@ -2,30 +2,32 @@
 
 ## Current Product Stage
 
-SecureAuthX is in Sprint 10: Developer Portal.
+SecureAuthX is in Sprint 11: Admin Portal.
 
-The current product objective is implementing a self-service Developer Portal API that allows developers to create projects, manage API keys, rotate OAuth client secrets, view usage analytics, and configure rate limits.
+The current product objective is implementing an Admin Portal API that allows administrators to view a platform dashboard, browse audit logs, manage system announcements, configure system settings, and track/resolve security incidents.
 
-## Sprint 10 Scope
+## Sprint 11 Scope
 
 In scope:
 
-- Developer project CRUD (create, list, get, update, delete) — each project belongs to a user and can optionally link an OAuth client.
-- API key management (create, list, revoke) — keys are SHA-256 hashed before storage; plaintext shown only at creation.
-- OAuth client secret rotation — generates a new random secret, hashes with Argon2id, updates the linked client; old secret immediately invalid.
-- Daily usage analytics per project (request count, success/failure counts, average latency, token exchanges, userinfo requests).
-- Rate limit management CRUD (set, get, delete) — stored but not enforced at runtime.
-- User isolation: users may only manage their own projects; admins can access all projects.
-- All 183 tests pass (147 pre-existing + 36 new developer portal tests).
+- Platform dashboard with aggregate metrics (total users, sessions, active apps, pending incidents).
+- Audit log browsing with pagination and filtering (by userId, action).
+- Automated audit recording for login/logout/registration/passkey/oauth/secret-rotation/admin actions.
+- System announcement CRUD (create, list, get, update, delete) with severity levels and expiry.
+- System settings management (list, get by key, update value) — seeded with 4 default settings.
+- Security incident tracking (list with pagination and resolved filter, get by id, resolve).
+- Automated incident creation for failed login attempts.
+- Admin-only access via `ROLE_ADMIN` and `@PreAuthorize("hasRole('ADMIN')")`.
+- All 209 tests pass (183 pre-existing + 26 new admin portal tests).
 
 Out of scope:
 
-- Rate limit enforcement at runtime.
-- Usage analytics aggregation beyond daily records.
-- Frontend/UI for the developer portal (backend API only).
-- API key usage tracking in request filters (tracking endpoints exist but are not wired into request processing).
-- Webhook management.
-- Audit logs.
+- Frontend/UI for the admin portal (backend API only).
+- Real-time alerts or WebSocket-based notifications.
+- Incident severity auto-escalation.
+- Audit log retention/cleanup policies.
+- Export/download of audit logs.
+- Multi-admin audit (who performed which action is tracked).
 
 ## Completed Sprints
 
@@ -38,8 +40,10 @@ Out of scope:
 - **Sprint 06**: OAuth 2.1 Authorization Server — Authorization Code + Client Credentials flows.
 - **Sprint 07**: Passkeys — WebAuthn/FIDO2 passwordless authentication.
 - **Sprint 08**: OpenID Connect 1.0 Provider — ID Tokens, UserInfo, Discovery, JWKS.
+- **Sprint 09**: OAuth client management REST API — list, get, create OAuth clients (merged with Sprint 06).
 - **Sprint 10**: Developer Portal — project management, API keys, secret rotation, usage analytics, rate limits.
+- **Sprint 11**: Admin Portal — dashboard, audit logs, announcements, system settings, security incidents.
 
 ## Success Criteria
 
-Sprint 10 succeeds when developers can create and manage projects via REST API, API keys are created with SHA-256 hashed storage and plaintext returned only once, OAuth client secrets can be rotated with immediate invalidation of the old secret, daily usage analytics are returned for specified date ranges, rate limit configuration can be created, read, and deleted, users are isolated to their own projects, all 183 tests pass, and documentation is current.
+Sprint 11 succeeds when administrators can view platform metrics via the dashboard endpoint, browse audit logs with pagination and filtering, perform CRUD on system announcements, read and update system settings, track and resolve security incidents, audit events are automatically recorded across existing services, all 209 tests pass, and documentation is current.

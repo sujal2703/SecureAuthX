@@ -1,5 +1,6 @@
 package com.secureauthx.server.auth.service;
 
+import com.secureauthx.server.admin.service.AuditService;
 import com.secureauthx.server.auth.dto.RegistrationRequest;
 import com.secureauthx.server.auth.dto.RegistrationResponse;
 import com.secureauthx.server.auth.entity.User;
@@ -14,6 +15,7 @@ import com.secureauthx.server.organization.service.OrganizationService;
 import java.util.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +24,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class RegistrationService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RegistrationService.class);
+
+    @Autowired(required = false)
+    private AuditService auditService;
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -63,6 +68,11 @@ public class RegistrationService {
         organizationService.createPersonalOrganization(user);
 
         LOGGER.info("User registration completed for user_id={} with role=USER and personal org", user.getId());
+
+        if (auditService != null) {
+            auditService.record(user.getId(), null, "REGISTRATION", user.getEmail(), true, null);
+        }
+
         return userMapper.toRegistrationResponse(user);
     }
 

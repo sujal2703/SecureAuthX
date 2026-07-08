@@ -2,7 +2,7 @@
 
 ## Current Stage
 
-Sprint 10 adds the Developer Portal. Developers can now create projects, manage API keys, rotate OAuth client secrets, view usage analytics, and configure rate limits through a self-service REST API.
+Sprint 11 adds the Admin Portal. Administrators can now view a platform dashboard, browse audit logs, manage system announcements, configure system settings, and track/resolve security incidents.
 
 ## Developer Foundation Flow
 
@@ -178,6 +178,46 @@ Sprint 10 adds the Developer Portal. Developers can now create projects, manage 
 3. Developer can view the configuration via `GET /api/v1/developer/projects/{projectId}/rate-limits`.
 4. Developer can remove the configuration via `DELETE /api/v1/developer/projects/{projectId}/rate-limits`.
 5. Rate limit configuration is stored but not currently enforced at runtime — this is management-only CRUD.
+
+## Admin Portal Flows
+
+### Audit Log Flow
+
+1. Admin authenticates via login to obtain a JWT access token (must have `ROLE_ADMIN`).
+2. Admin calls `GET /api/v1/admin/audit` to browse audit log entries with pagination, optional filtering by `userId` or `action`.
+3. Admin can view a specific audit entry via `GET /api/v1/admin/audit/{id}`.
+4. Audit entries are automatically recorded for: login, logout, failed login, registration, passkey registration/authentication, OAuth client creation, secret rotation, and admin actions.
+
+### Dashboard Flow
+
+1. Admin authenticates via login to obtain a JWT access token (must have `ROLE_ADMIN`).
+2. Admin calls `GET /api/v1/admin/dashboard` to view aggregate platform metrics:
+   - Total users, total sessions, active sessions, total apps/developers.
+   - Pending security incidents, recent registrations, recent logins.
+   - Recent audit actions (last 10 entries).
+
+### Announcement Management Flow
+
+1. Admin authenticates via login to obtain a JWT access token (must have `ROLE_ADMIN`).
+2. Admin creates an announcement via `POST /api/v1/admin/announcements` with title, content, severity (`INFO`, `WARNING`, `CRITICAL`), active flag, and optional expiry.
+3. Admin can list all announcements via `GET /api/v1/admin/announcements` (with optional `active=true` filter).
+4. Admin can view, update, or delete a specific announcement via `GET/PUT/DELETE /api/v1/admin/announcements/{id}`.
+
+### System Settings Flow
+
+1. Admin authenticates via login to obtain a JWT access token (must have `ROLE_ADMIN`).
+2. Admin can list all settings via `GET /api/v1/admin/settings`.
+3. Admin can view a specific setting by key via `GET /api/v1/admin/settings/{key}`.
+4. Admin can update a setting value via `PUT /api/v1/admin/settings/{key}`.
+5. Default seed settings: `platform.maintenance_mode`, `security.max_login_attempts`, `security.session_timeout_minutes`, `platform.maintenance_message`.
+
+### Security Incident Flow
+
+1. Admin authenticates via login to obtain a JWT access token (must have `ROLE_ADMIN`).
+2. Admin can list security incidents via `GET /api/v1/admin/incidents` with pagination and optional `resolved` filter.
+3. Admin can view a specific incident via `GET /api/v1/admin/incidents/{id}`.
+4. Admin resolves an incident via `PUT /api/v1/admin/incidents/{id}/resolve` with an optional resolution note.
+5. Incidents are automatically created for failed login attempts (recorded by `AuthenticationService`).
 
 ## Future Flows
 
