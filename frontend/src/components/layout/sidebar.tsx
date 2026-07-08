@@ -13,6 +13,9 @@ import {
   ShieldCheck,
   Building2,
   Key,
+  Code2,
+  Fingerprint,
+  Shield,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
@@ -20,10 +23,13 @@ import { useAuth } from "@/hooks/use-auth";
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/profile", label: "Profile", icon: User },
-  { href: "/dashboard/sessions", label: "Sessions", icon: Monitor },
-  { href: "/dashboard/devices", label: "Devices", icon: Smartphone },
   { href: "/dashboard/organizations", label: "Organizations", icon: Building2 },
   { href: "/dashboard/oauth-clients", label: "OAuth Clients", icon: Key },
+  { href: "/dashboard/developer", label: "Developer Portal", icon: Code2 },
+  { href: "/dashboard/passkeys", label: "Passkeys", icon: Fingerprint },
+  { href: "/dashboard/security", label: "Security", icon: Shield },
+  { href: "/dashboard/sessions", label: "Sessions", icon: Monitor },
+  { href: "/dashboard/devices", label: "Devices", icon: Smartphone },
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 

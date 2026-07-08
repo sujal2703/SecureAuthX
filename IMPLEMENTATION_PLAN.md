@@ -175,3 +175,29 @@ Only the tasks in `.ai/12_CURRENT_SPRINT.md` are in scope.
 - 14 new frontend tests (organizations: 6, oauth-clients: 8)
 - All 52 frontend tests pass
 - Backend unchanged (uses existing APIs only)
+
+### Sprint F5 — Frontend Developer Portal (2026-07-08)
+
+- Developer Dashboard with stat cards (Total Projects, API Keys, Rate Limit Status)
+- Projects list page with search, create, and delete
+- New project creation form with optional OAuth client selection
+- Project detail page with tabbed interface (Overview, API Keys, Usage, Rate Limits)
+- API Key management within projects: create with label, revoke, copy key on creation
+- Usage analytics display: total/success/failed requests with daily breakdown
+- Rate limit configuration: view, edit, enable/disable per-project
+- Developer portal service with all project, API key, usage, rate limit, and secret rotation methods
+- Developer portal, projects, API key, usage, rate limit, and passkey registration TypeScript types
+- 7 new frontend tests (developer dashboard: 3, projects: 4)
+
+### Sprint F6 — Frontend Passkeys (WebAuthn) & Security (2026-07-08)
+
+- Dedicated Passkeys page with total count, WebAuthn support indicator, passkey list
+- Passkey registration page with full WebAuthn flow (navigator.credentials.create)
+- Browser WebAuthn support detection and unsupported browser messaging
+- Security overview page with passkey count, password status, active sessions count, security status
+- Security recommendations when passkeys are missing or many sessions active
+- Updated sidebar: Developer Portal, Passkeys, Security added to navigation
+- Updated header with page titles for all new routes
+- 13 new frontend tests (passkeys: 5, security: 4, navigation: updated)
+- All 68 frontend tests pass
+- Backend unchanged (uses existing APIs only)

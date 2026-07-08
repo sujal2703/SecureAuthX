@@ -15,6 +15,12 @@ const pageTitles: Record<string, string> = {
   "/dashboard/organizations": "Organizations",
   "/dashboard/oauth-clients": "OAuth Clients",
   "/dashboard/oauth-clients/new": "New OAuth Client",
+  "/dashboard/developer": "Developer Portal",
+  "/dashboard/developer/projects": "Projects",
+  "/dashboard/developer/projects/new": "New Project",
+  "/dashboard/passkeys": "Passkeys",
+  "/dashboard/passkeys/register": "Register Passkey",
+  "/dashboard/security": "Security",
   "/dashboard/settings": "Settings",
 };
 

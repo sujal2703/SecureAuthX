@@ -43,6 +43,11 @@ describe("Sidebar Navigation", () => {
     renderWithProviders(<Sidebar />);
     expect(screen.getByText("Dashboard")).toBeInTheDocument();
     expect(screen.getByText("Profile")).toBeInTheDocument();
+    expect(screen.getByText("Organizations")).toBeInTheDocument();
+    expect(screen.getByText("OAuth Clients")).toBeInTheDocument();
+    expect(screen.getByText("Developer Portal")).toBeInTheDocument();
+    expect(screen.getByText("Passkeys")).toBeInTheDocument();
+    expect(screen.getByText("Security")).toBeInTheDocument();
     expect(screen.getByText("Sessions")).toBeInTheDocument();
     expect(screen.getByText("Devices")).toBeInTheDocument();
     expect(screen.getByText("Settings")).toBeInTheDocument();
